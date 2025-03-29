@@ -51,9 +51,32 @@ stock_simulation_engine/
 └── README.md                 # This file
 ```
 
+Key project files and directories:
+- [modules/](./modules/) - Core simulation modules
+  - [base.py](./modules/base.py) - Base classes and utilities
+  - [models.py](./modules/models.py) - Model implementations (GBM, Jump, Hybrid)
+  - [analytics.py](./modules/analytics.py) - Statistics and visualization functions
+  - [engine.py](./modules/engine.py) - Main simulation engine
+- [templates/](./templates/) - HTML templates for reports
+  - [index.html](./templates/index.html) - Main template for report generation
+- [output/](./output/) - Default output directory
+  - [data/](./output/data/) - Simulation data files
+  - [graphs/](./output/graphs/) - Generated visualizations 
+  - [reports/](./output/reports/) - HTML reports
+- [stock_simulation_main.py](./stock_simulation_main.py) - Entry point for single-stock simulation
+- [web_interface.py](./web_interface.py) - Flask-based web interface
+- [reporting.py](./reporting.py) - Report generation functionality
+- [sp500_tickers.py](./sp500_tickers.py) - S&P 500 tickers and sector information
+- [requirements.txt](./requirements.txt) - Project dependencies
+
 ## Installation
 
 1. Clone the repository
+```bash
+git clone https://github.com/EdenRochmanSharabi/stock-price-simulation
+cd stock-price-simulation
+```
+
 2. Install the dependencies:
 
 ```bash
@@ -119,15 +142,15 @@ Navigate to http://localhost:5000 in your browser to access the web interface.
 
 ### Geometric Brownian Motion (GBM)
 
-The standard model for stock price movements with constant drift and volatility.
+The standard model for stock price movements with constant drift and volatility. Implementation in [models.py](./modules/models.py).
 
 ### Jump Diffusion Model
 
-Extends GBM by adding random jumps to model market shocks.
+Extends GBM by adding random jumps to model market shocks. Implementation in [models.py](./modules/models.py).
 
 ### Hybrid Model
 
-Combines GBM, jump diffusion, and volatility clustering to create a more realistic model of stock price behavior.
+Combines GBM, jump diffusion, and volatility clustering to create a more realistic model of stock price behavior. Implementation in [models.py](./modules/models.py).
 
 ## Parameters
 
@@ -154,13 +177,13 @@ Combines GBM, jump diffusion, and volatility clustering to create a more realist
 
 ### Data Files
 
-Simulation data is saved in the `output/data/` directory:
+Simulation data is saved in the [`output/data/`](./output/data/) directory:
 - `{ticker}_simulation_data.json`: JSON file with simulation statistics
 - `{ticker}_paths.csv`: CSV file with simulated price paths
 
 ### Visualizations
 
-Charts are saved in the `output/graphs/` directory:
+Charts are saved in the [`output/graphs/`](./output/graphs/) directory:
 - Price paths chart
 - Price distribution histogram
 - Returns distribution histogram
@@ -169,13 +192,13 @@ Charts are saved in the `output/graphs/` directory:
 
 ### Reports
 
-HTML reports are generated in the `output/reports/` directory:
+HTML reports are generated in the [`output/reports/`](./output/reports/) directory:
 - Individual stock reports: `{ticker}_report.html`
 - Multi-stock consolidated reports: `multi_stock_report_{timestamp}.html`
 
 ## Statistics & Analysis
 
-The simulation calculates and provides the following statistics:
+The simulation calculates and provides the following statistics (implemented in [`analytics.py`](./modules/analytics.py)):
 
 - **Price Statistics**: Mean, median, standard deviation, min/max, percentiles
 - **Return Statistics**: Expected return, median return, return volatility
@@ -186,6 +209,7 @@ The simulation calculates and provides the following statistics:
 
 ## Dependencies
 
+See [`requirements.txt`](./requirements.txt) for the complete list:
 - numpy: Numerical computations
 - pandas: Data handling
 - matplotlib: Basic plotting functionality
