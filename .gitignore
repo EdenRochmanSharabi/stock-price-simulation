@@ -108,4 +108,4 @@ dmypy.json
 # Project specific
 data/*.csv
 results/
-*.npy 
+*.npy GITHUB_SAVE/
