@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Simulation Control</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 32px;
+            margin-bottom: 30px;
+            box-sizing: border-box;
+        }
+        
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .parameter-info {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+        
+        @media (min-width: 768px) {
+            .parameter-info {
+                grid-template-columns: 300px 1fr;
+            }
+        }
+        
+        .parameter-input {
+            width: 100%;
+            margin-bottom: 0;
+        }
+        
+        .parameter-description {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            border-left: 3px solid #3498db;
+            margin: 0;
+            height: fit-content;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .parameter-description ul {
+            margin: 8px 0;
+            padding-left: 20px;
+            list-style-type: none;
+        }
+        
+        .parameter-description li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 16px;
+        }
+        
+        .parameter-description li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            width: 100%;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.5;
+            transition: all 0.2s ease;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
+        
+        input:focus,
+        select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+        
+        .form-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 6px;
+            margin-bottom: 0;
+            line-height: 1.4;
+        }
+        
+        .manual-param {
+            margin-top: 32px;
+            padding: 24px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .manual-param h3 {
+            margin: 0 0 32px 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+            width: 100%;
+        }
+        
+        @media (min-width: 1200px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.5;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            color: #fff;
+            background-color: #3498db;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-success {
+            background-color: #27ae60;
+        }
+        
+        .btn-secondary {
+            background-color: #3498db;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+        
+        .status-container {
+            margin-top: 48px;
+            padding: 24px;
+            background-color: var(--light-color);
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .status-heading {
+            margin-bottom: 24px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .status-idle {
+            background-color: var(--secondary-color);
+        }
+        
+        .status-running {
+            background-color: var(--warning-color);
+        }
+        
+        .status-complete {
+            background-color: var(--success-color);
+        }
+        
+        .status-error {
+            background-color: var(--danger-color);
+        }
+        
+        .progress-container {
+            background-color: #ddd;
+            border-radius: 4px;
+            height: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--success-color);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .status-details {
+            margin-top: 15px;
+        }
+        
+        .status-detail {
+            padding: 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .error-list {
+            margin-top: 20px;
+            color: var(--danger-color);
+        }
+        
+        .sector-group {
+            margin-bottom: 24px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .sector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            border: 1px solid #e0e0e0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .sector-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            cursor: pointer;
+            user-select: none;
+            margin: 0;
+        }
+        
+        .sector-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: #3498db;
+        }
+        
+        .ticker-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            padding: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .ticker-item {
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin: 0;
+            height: 32px;
+            box-sizing: border-box;
+        }
+        
+        .ticker-item:hover {
+            background-color: #e9ecef;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .ticker-item.selected {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .ticker-search {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            font-size: 16px;
+        }
+        
+        .ticker-search:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .selected-tickers {
+            margin: 24px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .selected-tickers h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .selected-tickers-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .selected-ticker {
+            background-color: #3498db;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+        
+        .remove-ticker {
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+        
+        .remove-ticker:hover {
+            opacity: 0.8;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .summary-section {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .time-remaining {
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        .sector-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .manual-param {
+            display: none;
+        }
+        
+        .refresh-button {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .refresh-button:hover {
+            background-color: #2980b9;
+        }
+        
+        .refresh-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .sector-count {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .ticker-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+        }
+        
+        .ticker {
+            background-color: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .ticker-link {
+            color: #2c3e50;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .ticker-link:hover {
+            color: #3498db;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Stock Price Simulation Control</h1>
+        <p>Configure and run Monte Carlo simulations for S&P 500 stocks</p>
+    </div>
+
+    <div class="container">
+        <div class="action-buttons">
+            <button id="refreshTickers" class="btn btn-secondary">
+                <i class="fas fa-sync"></i> Refresh S&P 500 Tickers
+            </button>
+            <button id="startSimulation" class="btn btn-success">
+                Start Simulation
+            </button>
+            <button id="viewReport" class="btn btn-secondary" disabled>
+                View Report
+            </button>
+        </div>
+
+        <div class="form-grid">
+            <!-- Basic Configuration -->
+            <div class="form-group">
+                <div class="parameter-info">
+                    <div class="parameter-input">
+                        <label for="model_type">Simulation Model</label>
+                        <select id="model_type" name="model_type">
+                            <option value="combined">Combined (GBM + Jump Diffusion)</option>
+                            <option value="gbm">Geometric Brownian Motion</option>
+                            <option value="jump">Jump Diffusion</option>
+                        </select>
+                    </div>
+                    <div class="parameter-description">
+                        <strong>Effect:</strong> Determines the mathematical model used for price evolution.
+                        <ul>
+                            <li><strong>Combined:</strong> Most realistic model, captures both continuous price changes and sudden jumps</li>
+                            <li><strong>GBM:</strong> Smooth price changes following normal distribution</li>
+                            <li><strong>Jump:</strong> Emphasizes sudden price movements and market shocks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="parameter-info">
+                    <div class="parameter-input">
+                        <label for="num_paths">Number of Paths</label>
+                        <input type="number" id="num_paths" name="num_paths" value="100000" min="1000" step="1000">
+                        <div class="form-text">Recommended: 1000-10000 for testing, 100000+ for production</div>
+                    </div>
+                    <div class="parameter-description">
+                        <strong>Effect:</strong> Controls simulation accuracy. More paths = more accurate results but longer computation time. Each path represents a possible future price trajectory.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="parameter-info">
+                    <div class="parameter-input">
+                        <label for="num_steps">Number of Steps</label>
+                        <input type="number" id="num_steps" name="num_steps" value="21" min="1">
+                    </div>
+                    <div class="parameter-description">
+                        <strong>Effect:</strong> Number of time points in each path. More steps = finer granularity but longer computation. Default 21 represents trading days in a month.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="parameter-info">
+                    <div class="parameter-input">
+                        <label for="time_step">Time Step (years)</label>
+                        <input type="number" id="time_step" name="time_step" value="0.003968" step="0.0001">
+                        <div class="form-text">Default: 1/252 (one trading day)</div>
+                    </div>
+                    <div class="parameter-description">
+                        <strong>Effect:</strong> Time interval between steps in years. Smaller steps capture more detail but increase computation time.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="parameter-info">
+                    <div class="parameter-input">
+                        <label for="lookback_period">Lookback Period</label>
+                        <select id="lookback_period" name="lookback_period">
+                            <option value="1y">1 Year</option>
+                            <option value="2y" selected>2 Years</option>
+                            <option value="5y">5 Years</option>
+                        </select>
+                    </div>
+                    <div class="parameter-description">
+                        <strong>Effect:</strong> Historical data period used for parameter calibration. Longer periods provide more stable estimates but may miss recent market changes.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="parameter-info">
+                    <div class="parameter-input">
+                        <label>
+                            <input type="checkbox" id="calibrate" name="calibrate" checked>
+                            Calibrate Model Parameters
+                        </label>
+                    </div>
+                    <div class="parameter-description">
+                        <strong>Effect:</strong> When checked, automatically estimates model parameters from historical data. Uncheck to manually set parameters below.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="manual-param">
+            <h3>Manual Model Parameters</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <div class="parameter-info">
+                        <div class="parameter-input">
+                            <label for="mu">Drift (μ)</label>
+                            <input type="number" id="mu" name="mu" value="0.08" step="0.01">
+                        </div>
+                        <div class="parameter-description">
+                            <strong>Effect:</strong> Average annual return rate. Higher values = stronger upward trend.
+                            <div class="form-text">Typical range: 0.05-0.15 (5-15% per year)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="parameter-info">
+                        <div class="parameter-input">
+                            <label for="sigma">Volatility (σ)</label>
+                            <input type="number" id="sigma" name="sigma" value="0.2" step="0.01">
+                        </div>
+                        <div class="parameter-description">
+                            <strong>Effect:</strong> Price fluctuation intensity. Higher values = larger price swings.
+                            <div class="form-text">Typical range: 0.1-0.4 (10-40% annual volatility)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="parameter-info">
+                        <div class="parameter-input">
+                            <label for="jump_intensity">Jump Intensity (λ)</label>
+                            <input type="number" id="jump_intensity" name="jump_intensity" value="10" step="0.1">
+                        </div>
+                        <div class="parameter-description">
+                            <strong>Effect:</strong> Average number of jumps per year. Higher values = more frequent sudden price changes.
+                            <div class="form-text">Typical range: 5-20 jumps/year</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="parameter-info">
+                        <div class="parameter-input">
+                            <label for="jump_mean">Jump Mean (μj)</label>
+                            <input type="number" id="jump_mean" name="jump_mean" value="-0.01" step="0.001">
+                        </div>
+                        <div class="parameter-description">
+                            <strong>Effect:</strong> Average jump size. Negative values = downward jumps, positive = upward jumps.
+                            <div class="form-text">Typical range: -0.03 to 0.03 (-3% to 3%)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="parameter-info">
+                        <div class="parameter-input">
+                            <label for="jump_sigma">Jump Volatility (σj)</label>
+                            <input type="number" id="jump_sigma" name="jump_sigma" value="0.02" step="0.001">
+                        </div>
+                        <div class="parameter-description">
+                            <strong>Effect:</strong> Variation in jump sizes. Higher values = more unpredictable jump magnitudes.
+                            <div class="form-text">Typical range: 0.01-0.05 (1-5%)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="parameter-info">
+                        <div class="parameter-input">
+                            <label for="vol_clustering">Volatility Clustering (ρ)</label>
+                            <input type="number" id="vol_clustering" name="vol_clustering" value="0.85" step="0.01">
+                        </div>
+                        <div class="parameter-description">
+                            <strong>Effect:</strong> Persistence of volatility. Higher values = longer periods of high/low volatility.
+                            <div class="form-text">Range: 0-1 (0 = no clustering, 1 = perfect clustering)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sector-buttons">
+            <button id="selectAllTickers" class="btn btn-secondary">Select All S&P 500</button>
+            <button id="deselectAllTickers" class="btn btn-secondary">Deselect All</button>
+        </div>
+
+        <div class="selected-tickers">
+            <h3>Selected Tickers</h3>
+            <div class="selected-tickers-list" id="selectedTickersList">
+                <!-- Selected tickers will be displayed here -->
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="tickerSearch">Search Tickers:</label>
+            <input type="text" id="tickerSearch" class="ticker-search" placeholder="Type to search tickers...">
+        </div>
+
+        <div id="sectorsContainer">
+            <div class="form-group">
+                <label>Sectors:</label>
+                <div class="sector-groups">
+                    {% for sector, tickers in sectors.items() %}
+                    <div class="sector-group">
+                        <div class="sector-header">
+                            <label class="sector-checkbox">
+                                <input type="checkbox" name="sectors" value="{{ sector }}" class="sector-select">
+                                {{ sector }} ({{ tickers|length }} stocks)
+                            </label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary refresh-sector" data-sector="{{ sector }}">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="ticker-list">
+                            {% for ticker in tickers %}
+                            <div class="ticker-item" data-ticker="{{ ticker }}" data-sector="{{ sector }}">
+                                {{ ticker }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="status-container">
+            <div class="status-heading">
+                <h3>Simulation Status</h3>
+                <span class="status-badge" id="statusBadge">Idle</span>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="status-details">
+                <div class="status-detail">
+                    <span>Total Stocks:</span>
+                    <span id="totalStocks">{{ total_stocks }}</span>
+                </div>
+                <div class="status-detail">
+                    <span>Completed Stocks:</span>
+                    <span id="completedStocks">0</span>
+                </div>
+                <div class="status-detail">
+                    <span>Current Sector:</span>
+                    <span id="currentSector">-</span>
+                </div>
+                <div class="status-detail">
+                    <span>Current Stock:</span>
+                    <span id="currentStock">-</span>
+                </div>
+                <div class="status-detail">
+                    <span>Elapsed Time:</span>
+                    <span id="elapsedTime">-</span>
+                </div>
+                <div class="status-detail">
+                    <span>Time Remaining:</span>
+                    <span id="timeRemaining" class="time-remaining">-</span>
+                </div>
+            </div>
+            <div class="error-list" id="errorList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize status
+        let simulationStatus = JSON.parse('{{ simulation_status|tojson|safe }}');
+        
+        // Update status display
+        function updateStatus() {
+            const statusBadge = document.getElementById('statusBadge');
+            const progressBar = document.getElementById('progressBar');
+            const totalStocks = document.getElementById('totalStocks');
+            const completedStocks = document.getElementById('completedStocks');
+            const currentSector = document.getElementById('currentSector');
+            const currentStock = document.getElementById('currentStock');
+            const elapsedTime = document.getElementById('elapsedTime');
+            const timeRemaining = document.getElementById('timeRemaining');
+            const errorList = document.getElementById('errorList');
+            const startButton = document.getElementById('startSimulation');
+            const viewReportButton = document.getElementById('viewReport');
+            
+            // Update status badge
+            if (simulationStatus.running) {
+                statusBadge.textContent = 'Running';
+                statusBadge.className = 'status-badge status-running';
+            } else if (simulationStatus.progress === 100) {
+                statusBadge.textContent = 'Complete';
+                statusBadge.className = 'status-badge status-complete';
+                viewReportButton.disabled = false;
+            } else if (simulationStatus.errors.length > 0) {
+                statusBadge.textContent = 'Error';
+                statusBadge.className = 'status-badge status-error';
+            } else {
+                statusBadge.textContent = 'Idle';
+                statusBadge.className = 'status-badge status-idle';
+            }
+            
+            // Update progress bar
+            progressBar.style.width = `${simulationStatus.progress}%`;
+            
+            // Update counts
+            totalStocks.textContent = simulationStatus.total_stocks;
+            completedStocks.textContent = simulationStatus.completed_stocks;
+            
+            // Update current items
+            currentSector.textContent = simulationStatus.current_sector || '-';
+            currentStock.textContent = simulationStatus.current_stock || '-';
+            
+            // Update times
+            if (simulationStatus.elapsed_seconds !== undefined) {
+                elapsedTime.textContent = formatTime(simulationStatus.elapsed_seconds);
+            } else {
+                elapsedTime.textContent = '-';
+            }
+            
+            if (simulationStatus.remaining_seconds !== undefined) {
+                timeRemaining.textContent = formatTime(simulationStatus.remaining_seconds);
+            } else {
+                timeRemaining.textContent = '-';
+            }
+            
+            // Update errors
+            if (simulationStatus.errors.length > 0) {
+                errorList.innerHTML = simulationStatus.errors.map(error => 
+                    `<div>${error}</div>`
+                ).join('');
+            } else {
+                errorList.innerHTML = '';
+            }
+            
+            // Update button states
+            startButton.disabled = simulationStatus.running;
+        }
+        
+        // Format time in seconds to HH:MM:SS
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // Poll for status updates
+        function pollStatus() {
+            fetch('/simulation_status')
+                .then(response => response.json())
+                .then(data => {
+                    simulationStatus = data;
+                    updateStatus();
+                    
+                    if (data.running) {
+                        setTimeout(pollStatus, 1000);
+                    }
+                })
+                .catch(error => console.error('Error polling status:', error));
+        }
+        
+        // Ticker selection functionality
+        const selectedTickers = new Set();
+        const selectedTickersList = document.getElementById('selectedTickersList');
+        const tickerSearch = document.getElementById('tickerSearch');
+        
+        // Function to update selected tickers display
+        function updateSelectedTickersDisplay() {
+            selectedTickersList.innerHTML = Array.from(selectedTickers).map(ticker => `
+                <div class="selected-ticker">
+                    ${ticker}
+                    <span class="remove-ticker" data-ticker="${ticker}">&times;</span>
+                </div>
+            `).join('');
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-ticker').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const ticker = e.target.dataset.ticker;
+                    selectedTickers.delete(ticker);
+                    document.querySelector(`.ticker-item[data-ticker="${ticker}"]`).classList.remove('selected');
+                    updateSelectedTickersDisplay();
+                });
+            });
+        }
+        
+        // Add click event listeners to ticker items
+        document.querySelectorAll('.ticker-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const ticker = item.dataset.ticker;
+                console.log(`Ticker clicked: ${ticker}`);
+                
+                if (selectedTickers.has(ticker)) {
+                    console.log(`Removing ticker: ${ticker}`);
+                    selectedTickers.delete(ticker);
+                    item.classList.remove('selected');
+                } else {
+                    console.log(`Adding ticker: ${ticker}`);
+                    selectedTickers.add(ticker);
+                    item.classList.add('selected');
+                }
+                console.log("Current selectedTickers:", Array.from(selectedTickers));
+                updateSelectedTickersDisplay();
+            });
+        });
+        
+        // Ticker search functionality
+        tickerSearch.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.ticker-item').forEach(item => {
+                const ticker = item.dataset.ticker.toLowerCase();
+                if (ticker.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+        
+        // Add sector selection functionality
+        document.querySelectorAll('.sector-select').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const sector = e.target.value;
+                const isChecked = e.target.checked;
+                document.querySelectorAll(`.ticker-item[data-sector="${sector}"]`).forEach(ticker => {
+                    const tickerSymbol = ticker.dataset.ticker;
+                    if (isChecked) {
+                        selectedTickers.add(tickerSymbol);
+                        ticker.classList.add('selected');
+                    } else {
+                        selectedTickers.delete(tickerSymbol);
+                        ticker.classList.remove('selected');
+                    }
+                });
+                updateSelectedTickersDisplay();
+            });
+        });
+
+        // Select/Deselect all S&P 500 tickers
+        document.getElementById('selectAllTickers').addEventListener('click', () => {
+            document.querySelectorAll('.ticker-item').forEach(ticker => {
+                const tickerSymbol = ticker.dataset.ticker;
+                selectedTickers.add(tickerSymbol);
+                ticker.classList.add('selected');
+            });
+            updateSelectedTickersDisplay();
+        });
+
+        document.getElementById('deselectAllTickers').addEventListener('click', () => {
+            selectedTickers.clear();
+            document.querySelectorAll('.ticker-item').forEach(ticker => {
+                ticker.classList.remove('selected');
+            });
+            updateSelectedTickersDisplay();
+        });
+        
+        // Update start simulation button to use selected tickers
+        document.getElementById('startSimulation').addEventListener('click', () => {
+            if (selectedTickers.size === 0) {
+                alert('Please select at least one ticker to simulate');
+                return;
+            }
+            
+            const numPaths = parseInt(document.getElementById('num_paths').value);
+            if (numPaths < 1000) {
+                alert('Number of paths must be at least 1000');
+                return;
+            }
+            
+            const formData = new FormData();
+            
+            // Add form fields
+            formData.append('model_type', document.getElementById('model_type').value);
+            formData.append('num_paths', numPaths);
+            formData.append('num_steps', document.getElementById('num_steps').value);
+            formData.append('time_step', document.getElementById('time_step').value);
+            formData.append('lookback_period', document.getElementById('lookback_period').value);
+            formData.append('calibrate', document.getElementById('calibrate').checked);
+            
+            // Add manual parameters if calibration is disabled
+            if (!document.getElementById('calibrate').checked) {
+                formData.append('mu', document.getElementById('mu').value);
+                formData.append('sigma', document.getElementById('sigma').value);
+                formData.append('jump_intensity', document.getElementById('jump_intensity').value);
+                formData.append('jump_mean', document.getElementById('jump_mean').value);
+                formData.append('jump_sigma', document.getElementById('jump_sigma').value);
+                formData.append('vol_clustering', document.getElementById('vol_clustering').value);
+            }
+            
+            // Add selected tickers as JSON string
+            const tickersArray = Array.from(selectedTickers);
+            console.log("Selected tickers being sent:", tickersArray);
+            formData.append('tickers', JSON.stringify(tickersArray));
+            
+            // Disable button and show loading state
+            const button = document.getElementById('startSimulation');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+            
+            // Start simulation
+            fetch('/start_simulation', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    pollStatus();
+                } else {
+                    alert('Error starting simulation: ' + data.message);
+                    button.disabled = false;
+                    button.innerHTML = 'Start Simulation';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error starting simulation');
+                button.disabled = false;
+                button.innerHTML = 'Start Simulation';
+            });
+        });
+        
+        // View report
+        document.getElementById('viewReport').addEventListener('click', () => {
+            window.open('/view_report', '_blank');
+        });
+        
+        // Toggle manual parameters
+        document.getElementById('calibrate').addEventListener('change', (e) => {
+            document.querySelector('.manual-param').style.display = e.target.checked ? 'none' : 'block';
+        });
+        
+        // Refresh tickers
+        document.getElementById('refreshTickers').addEventListener('click', () => {
+            const button = document.getElementById('refreshTickers');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            
+            fetch('/refresh_tickers', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Reload the page to show updated sectors
+                    location.reload();
+                } else {
+                    alert('Error refreshing tickers: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error refreshing tickers');
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-sync"></i> Refresh S&P 500 Tickers';
+            });
+        });
+        
+        // Refresh individual sector
+        function refreshSector(sector) {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = 'Refreshing...';
+            
+            fetch('/refresh_tickers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ sector: sector })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update the sector display
+                    const sectorGroup = button.closest('.sector-group');
+                    const tickersContainer = sectorGroup.querySelector('.sector-tickers');
+                    const tickers = data.sectors[sector];
+                    
+                    tickersContainer.innerHTML = tickers.slice(0, 5).map(ticker => 
+                        `<div class="ticker-item">${ticker}</div>`
+                    ).join('');
+                    
+                    if (tickers.length > 5) {
+                        tickersContainer.innerHTML += 
+                            `<div class="ticker-item">... and ${tickers.length - 5} more</div>`;
+                    }
+                    
+                    // Update ticker count
+                    sectorGroup.querySelector('.sector-count').textContent = 
+                        `(${tickers.length} tickers)`;
+                } else {
+                    alert('Error refreshing sector: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error refreshing sector');
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.innerHTML = 'Refresh';
+            });
+        }
+        
+        // Initial status update
+        updateStatus();
+    </script>
+</body>
+</html> 

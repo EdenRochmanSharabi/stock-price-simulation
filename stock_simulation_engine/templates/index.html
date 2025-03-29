@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Simulation Control</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: var(--dark-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .btn-success:hover {
+            background-color: #219653;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+        }
+        
+        .btn-warning:hover {
+            background-color: #f1c40f;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #2980b9;
+        }
+        
+        .disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .status-container {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .status-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .status-idle {
+            background-color: var(--secondary-color);
+        }
+        
+        .status-running {
+            background-color: var(--warning-color);
+        }
+        
+        .status-complete {
+            background-color: var(--success-color);
+        }
+        
+        .status-error {
+            background-color: var(--danger-color);
+        }
+        
+        .progress-container {
+            background-color: #ddd;
+            border-radius: 4px;
+            height: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--success-color);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .status-details {
+            margin-top: 15px;
+        }
+        
+        .status-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .error-list {
+            margin-top: 20px;
+            color: var(--danger-color);
+        }
+        
+        .sector-group {
+            margin-bottom: 20px;
+        }
+        
+        .sector-heading {
+            font-weight: bold;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .sector-tickers {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .action-buttons {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .summary-section {
+            background-color: var(--light-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .time-remaining {
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        .sector-buttons {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Stock Price Simulation Control</h1>
+        <p>Configure and run Monte Carlo simulations for multiple stocks</p>
+    </div>
+    
+    <div class="container">
+        <h2>Simulation Parameters</h2>
+        
+        <form id="simulation-form" action="/start_simulation" method="post">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="model_type">Model Type:</label>
+                    <select id="model_type" name="model_type">
+                        <option value="combined" selected>Combined (GBM + Jump + Regime)</option>
+                        <option value="gbm">Geometric Brownian Motion</option>
+                        <option value="jump">Jump Diffusion</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="num_paths">Number of Paths:</label>
+                    <input type="number" id="num_paths" name="num_paths" value="1000" min="100">
+                    <small>More paths = higher accuracy but slower (default: 1000)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="num_steps">Number of Steps:</label>
+                    <input type="number" id="num_steps" name="num_steps" value="21" min="5" max="252">
+                    <small>Number of time steps (default: 21 = ~1 month)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="time_step">Time Step Size (dt):</label>
+                    <input type="number" id="time_step" name="time_step" value="0.003968" min="0.001" max="0.1" step="0.001">
+                    <small>Time step in years (default: 1/252 ≈ 0.003968)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="companies_per_sector">Companies per Sector:</label>
+                    <input type="number" id="companies_per_sector" name="companies_per_sector" value="3" min="1" max="10">
+                    <small>How many companies to simulate from each sector</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lookback_period">Lookback Period:</label>
+                    <select id="lookback_period" name="lookback_period">
+                        <option value="1y">1 Year</option>
+                        <option value="2y" selected>2 Years</option>
+                        <option value="3y">3 Years</option>
+                        <option value="5y">5 Years</option>
+                        <option value="max">Maximum Available</option>
+                    </select>
+                    <small>Historical data period for calibration</small>
+                </div>
+            </div>
+            
+            <h3>Model Parameters</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="calibrate">Calibrate Model:</label>
+                    <select id="calibrate" name="calibrate">
+                        <option value="true" selected>Yes (use historical data)</option>
+                        <option value="false">No (use manual parameters)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group manual-param">
+                    <label for="mu">Drift (μ):</label>
+                    <input type="number" id="mu" name="mu" value="0.08" min="-0.5" max="0.5" step="0.01">
+                    <small>Annualized expected return (default: 0.08)</small>
+                </div>
+                
+                <div class="form-group manual-param">
+                    <label for="sigma">Volatility (σ):</label>
+                    <input type="number" id="sigma" name="sigma" value="0.2" min="0.01" max="1.0" step="0.01">
+                    <small>Annualized volatility (default: 0.2)</small>
+                </div>
+                
+                <div class="form-group manual-param">
+                    <label for="jump_intensity">Jump Intensity:</label>
+                    <input type="number" id="jump_intensity" name="jump_intensity" value="10" min="1" max="50" step="1">
+                    <small>Expected jumps per year (default: 10)</small>
+                </div>
+                
+                <div class="form-group manual-param">
+                    <label for="jump_mean">Mean Jump Size:</label>
+                    <input type="number" id="jump_mean" name="jump_mean" value="-0.01" min="-0.2" max="0.2" step="0.001">
+                    <small>Average logarithmic jump size (default: -0.01)</small>
+                </div>
+                
+                <div class="form-group manual-param">
+                    <label for="jump_sigma">Jump Volatility:</label>
+                    <input type="number" id="jump_sigma" name="jump_sigma" value="0.02" min="0.001" max="0.2" step="0.001">
+                    <small>Jump size standard deviation (default: 0.02)</small>
+                </div>
+                
+                <div class="form-group manual-param">
+                    <label for="vol_clustering">Volatility Clustering:</label>
+                    <input type="number" id="vol_clustering" name="vol_clustering" value="0.85" min="0" max="0.99" step="0.01">
+                    <small>Volatility persistence parameter (default: 0.85)</small>
+                </div>
+            </div>
+            
+            <h3>Select Sectors</h3>
+            <p>Choose which market sectors to include in the simulation:</p>
+            
+            <div class="sector-buttons">
+                <button type="button" id="select-all-btn" class="btn btn-secondary">Select All</button>
+                <button type="button" id="deselect-all-btn" class="btn btn-secondary">Deselect All</button>
+            </div>
+            
+            <div class="sectors-container">
+                {% for sector, tickers in sectors.items() %}
+                <div class="sector-group">
+                    <label>
+                        <input type="checkbox" name="sectors" value="{{ sector }}" checked>
+                        {{ sector }} ({{ tickers|length }} stocks)
+                    </label>
+                    <div class="sector-tickers">
+                        {% for ticker in tickers[:5] %}
+                        <span>{{ ticker }}</span>
+                        {% endfor %}
+                        {% if tickers|length > 5 %}
+                        <span>+ {{ tickers|length - 5 }} more</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="action-buttons">
+                <button type="submit" id="start-btn" class="btn btn-success">Start Simulation</button>
+                <button type="button" id="cancel-btn" class="btn btn-danger" disabled>Cancel Simulation</button>
+                <a href="/view_report" id="view-report-btn" class="btn btn-secondary">View Latest Report</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="status-container">
+        <div class="status-heading">
+            <h2>Simulation Status</h2>
+            <div id="status-badge" class="status-badge status-idle">Idle</div>
+        </div>
+        
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+        
+        <div id="progress-text">0% Complete</div>
+        
+        <div class="status-details">
+            <div class="status-detail">
+                <span>Current Sector:</span>
+                <span id="current-sector">-</span>
+            </div>
+            <div class="status-detail">
+                <span>Current Stock:</span>
+                <span id="current-stock">-</span>
+            </div>
+            <div class="status-detail">
+                <span>Stocks Completed:</span>
+                <span id="stocks-completed">0 / 0</span>
+            </div>
+            <div class="status-detail">
+                <span>Elapsed Time:</span>
+                <span id="elapsed-time">00:00:00</span>
+            </div>
+            <div class="status-detail">
+                <span>Estimated Time Remaining:</span>
+                <span id="remaining-time">--:--:--</span>
+            </div>
+        </div>
+        
+        <div id="error-list" class="error-list hidden">
+            <h3>Errors</h3>
+            <ul id="errors"></ul>
+        </div>
+        
+        <div id="summary-section" class="summary-section hidden">
+            <h3>Simulation Complete</h3>
+            <p>The simulation has finished running.</p>
+            <p>Total stocks processed: <span id="total-stocks-processed">0</span></p>
+            <p>Total time: <span id="total-time">00:00:00</span></p>
+            <p>
+                <a href="/view_report" class="btn btn-success">View Consolidated Report</a>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // DOM elements
+        const form = document.getElementById('simulation-form');
+        const startBtn = document.getElementById('start-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const viewReportBtn = document.getElementById('view-report-btn');
+        const statusBadge = document.getElementById('status-badge');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const currentSector = document.getElementById('current-sector');
+        const currentStock = document.getElementById('current-stock');
+        const stocksCompleted = document.getElementById('stocks-completed');
+        const elapsedTime = document.getElementById('elapsed-time');
+        const remainingTime = document.getElementById('remaining-time');
+        const errorList = document.getElementById('error-list');
+        const errorsUl = document.getElementById('errors');
+        const summarySection = document.getElementById('summary-section');
+        const totalStocksProcessed = document.getElementById('total-stocks-processed');
+        const totalTime = document.getElementById('total-time');
+        
+        // Status polling interval in milliseconds
+        const POLL_INTERVAL = 1000;
+        let statusInterval = null;
+        
+        // Formats seconds as HH:MM:SS
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+        
+        // Update UI based on status data
+        function updateStatus(data) {
+            // Update progress
+            progressBar.style.width = `${data.progress}%`;
+            progressText.textContent = `${data.progress}% Complete`;
+            
+            // Update current info
+            currentSector.textContent = data.current_sector || '-';
+            currentStock.textContent = data.current_stock || '-';
+            stocksCompleted.textContent = `${data.completed_stocks} / ${data.total_stocks}`;
+            
+            // Update times if available
+            if (data.elapsed_seconds !== undefined) {
+                elapsedTime.textContent = formatTime(data.elapsed_seconds);
+            }
+            
+            if (data.remaining_seconds !== undefined) {
+                remainingTime.textContent = formatTime(data.remaining_seconds);
+            }
+            
+            // Update status badge
+            if (data.running) {
+                statusBadge.className = 'status-badge status-running';
+                statusBadge.textContent = 'Running';
+                startBtn.disabled = true;
+                cancelBtn.disabled = false;
+                summarySection.classList.add('hidden');
+            } else if (data.progress === 100) {
+                statusBadge.className = 'status-badge status-complete';
+                statusBadge.textContent = 'Complete';
+                startBtn.disabled = false;
+                cancelBtn.disabled = true;
+                
+                // Show summary
+                summarySection.classList.remove('hidden');
+                totalStocksProcessed.textContent = data.completed_stocks;
+                totalTime.textContent = formatTime(data.elapsed_seconds);
+                
+                // Stop polling
+                clearInterval(statusInterval);
+            } else if (data.errors && data.errors.length > 0) {
+                statusBadge.className = 'status-badge status-error';
+                statusBadge.textContent = 'Error';
+                startBtn.disabled = false;
+                cancelBtn.disabled = true;
+                
+                // Show errors
+                errorList.classList.remove('hidden');
+                errorsUl.innerHTML = '';
+                data.errors.forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    errorsUl.appendChild(li);
+                });
+                
+                // Stop polling if not running
+                if (!data.running) {
+                    clearInterval(statusInterval);
+                }
+            } else {
+                statusBadge.className = 'status-badge status-idle';
+                statusBadge.textContent = 'Idle';
+                startBtn.disabled = false;
+                cancelBtn.disabled = true;
+            }
+        }
+        
+        // Poll the server for status updates
+        function pollStatus() {
+            fetch('/simulation_status')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatus(data);
+                })
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                });
+        }
+        
+        // Handle form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Clear previous errors and summary
+            errorList.classList.add('hidden');
+            errorsUl.innerHTML = '';
+            summarySection.classList.add('hidden');
+            
+            // Collect form data
+            const formData = new FormData(form);
+            
+            // Get selected sectors
+            const selectedSectors = Array.from(formData.getAll('sectors'));
+            
+            // Get all tickers from selected sectors
+            const selectedTickers = [];
+            selectedSectors.forEach(sector => {
+                const sectorTickers = {{ sectors|tojson|safe }}[sector] || [];
+                selectedTickers.push(...sectorTickers);
+            });
+            
+            // Add tickers to form data
+            selectedTickers.forEach(ticker => {
+                formData.append('tickers[]', ticker);
+            });
+            
+            // Send the form data to the server
+            fetch('/start_simulation', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Start polling for status updates
+                    clearInterval(statusInterval);
+                    statusInterval = setInterval(pollStatus, POLL_INTERVAL);
+                    
+                    // Update UI immediately
+                    statusBadge.className = 'status-badge status-running';
+                    statusBadge.textContent = 'Starting...';
+                    startBtn.disabled = true;
+                    cancelBtn.disabled = false;
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error starting simulation:', error);
+                alert('An error occurred while starting the simulation. Please try again.');
+            });
+        });
+        
+        // Start polling when the page loads to get current status
+        document.addEventListener('DOMContentLoaded', function() {
+            pollStatus();
+            
+            // Toggle manual parameters based on calibration option
+            const calibrateSelect = document.getElementById('calibrate');
+            const manualParams = document.querySelectorAll('.manual-param');
+            
+            function toggleManualParams() {
+                const isManual = calibrateSelect.value === 'false';
+                manualParams.forEach(param => {
+                    param.style.display = isManual ? 'block' : 'none';
+                });
+            }
+            
+            // Set initial state
+            toggleManualParams();
+            
+            // Add event listener
+            calibrateSelect.addEventListener('change', toggleManualParams);
+            
+            // Select all sectors button
+            document.getElementById('select-all-btn').addEventListener('click', function() {
+                document.querySelectorAll('input[name="sectors"]').forEach(checkbox => {
+                    checkbox.checked = true;
+                });
+            });
+            
+            // Deselect all sectors button
+            document.getElementById('deselect-all-btn').addEventListener('click', function() {
+                document.querySelectorAll('input[name="sectors"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
