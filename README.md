@@ -10,22 +10,31 @@ A Monte Carlo simulation tool for stock price modeling that incorporates regime 
   - **Hybrid Model**: Combines GBM, jumps, and volatility regime switching
 
 - **Object-Oriented Design**:
-  - Encapsulation of model parameters and data
-  - Abstraction through clear interfaces
-  - Inheritance for model specialization
-  - Polymorphism via the model interface
-  - Design patterns (Factory, Strategy)
+  - **Factory Pattern**: Used in model creation to abstract the instantiation process and allow for flexible model selection at runtime
+  - **Strategy Pattern**: Implemented to encapsulate different simulation algorithms and make them interchangeable
 
-- **Comprehensive Analysis**:
-  - Statistical metrics (mean, variance, VaR, etc.)
-  - Risk measures (Sharpe ratio, Sortino ratio)
-  - Probability distributions
-  - Drawdown analysis
+- **Techniques**:
+  - **Monte Carlo Simulation**: Using random sampling to solve problems that might be deterministic in principle
+  - **Markov Chain Regime Switching**: Modeling volatility clustering and market regime changes
+  - **Stochastic Calculus**: Implementing Geometric Brownian Motion and other stochastic processes
+  - **Poisson Process Modeling**: For simulating discrete jumps in asset prices
+  - **Maximum Likelihood Estimation**: For parameter calibration from historical data
+  - **Bootstrap Confidence Intervals**: For robust statistical inference
+  - **Moment Matching**: Ensuring simulated returns match historical statistical properties
+  - **Risk Metrics Calculation**: Implementing industry-standard risk measures
+  - **Statistical Hypothesis Testing**: To validate model assumptions and results
 
 - **Visualization**:
-  - Price path plots
-  - Probability distribution histograms
-  - Interactive HTML reports
+  - **Price Paths**: Interactive chart showing multiple simulated price trajectories
+  - **Price Distribution**: Histogram and kernel density estimation of final price distribution
+  - **Returns Distribution**: Histogram with normal distribution overlay for returns analysis
+  - **Probability Cone**: Fan chart showing price movement probability regions
+  - **Value at Risk (VaR)**: Visual representation of potential losses at different confidence levels
+  - **Heatmaps**: Correlation visualization between multiple stocks
+  - **Regime Detection**: Visualization of detected market regimes and transition probabilities
+  - **Jump Detection**: Highlighting detected jumps in historical price series
+  - **Drawdown Analysis**: Visualizing maximum drawdowns across simulations
+  - **Percentile Plots**: Showing how prices evolve across different percentiles
 
 - **SP500 Integration**:
   - Automatic retrieval of SP500 constituents
@@ -37,7 +46,7 @@ A Monte Carlo simulation tool for stock price modeling that incorporates regime 
 1. Clone the repository:
 ```bash
 git clone https://github.com/EdenRochmanSharabi/stock-price-simulation
-cd stock-simulation
+cd stock-price-simulation
 ```
 
 2. Create and activate a virtual environment:
