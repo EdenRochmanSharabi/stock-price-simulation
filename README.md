@@ -1,194 +1,64 @@
-# Stock Price Simulation with Regime Switching and Jump Diffusion
+# Stock Price Simulation - GitHub Pages Edition
 
-A Monte Carlo simulation tool for stock price modeling that incorporates regime switching and jump diffusion processes. The tool provides an object-oriented implementation following SOLID principles with proper encapsulation, abstraction, inheritance, and polymorphism.
+This repository contains a static website version of the Stock Price Simulation project, designed to be hosted on GitHub Pages.
+
+## About the Project
+
+This project displays pre-computed Monte Carlo simulation results for S&P 500 stocks using a hybrid model that combines:
+
+- Geometric Brownian Motion (GBM)
+- Jump Diffusion
+- Regime Switching (Volatility Clustering)
+
+The simulations were run with the following parameters:
+- 10,000 simulations per stock
+- 21 trading days time horizon
+- Daily time steps (dt = 1/252)
+- Hybrid model combining all three approaches
 
 ## Features
 
-- **Multiple Simulation Models**:
-  - **Geometric Brownian Motion (GBM)**: Standard model for stock price movements
-  - **Jump Diffusion**: Extends GBM with jumps to model market shocks
-  - **Hybrid Model**: Combines GBM, jumps, and volatility regime switching
+- Browse simulation results for S&P 500 stocks
+- View top-performing stocks ranked by expected return, Sharpe ratio, and Sortino ratio
+- Examine detailed statistics for each stock
+- Visualize the distribution of potential final values
 
-- **Object-Oriented Design**:
-  - **Factory Pattern**: Used in model creation to abstract the instantiation process and allow for flexible model selection at runtime
-  - **Strategy Pattern**: Implemented to encapsulate different simulation algorithms and make them interchangeable
+## Viewing the Website
 
-- **Techniques**:
-  - **Monte Carlo Simulation**: Using random sampling to solve problems that might be deterministic in principle
-  - **Markov Chain Regime Switching**: Modeling volatility clustering and market regime changes
-  - **Stochastic Calculus**: Implementing Geometric Brownian Motion and other stochastic processes
-  - **Poisson Process Modeling**: For simulating discrete jumps in asset prices
-  - **Maximum Likelihood Estimation**: For parameter calibration from historical data
-  - **Bootstrap Confidence Intervals**: For robust statistical inference
-  - **Moment Matching**: Ensuring simulated returns match historical statistical properties
-  - **Risk Metrics Calculation**: Implementing industry-standard risk measures
-  - **Statistical Hypothesis Testing**: To validate model assumptions and results
+You can access the static website at: [https://yourusername.github.io/your-repo-name](https://yourusername.github.io/your-repo-name)
 
-- **Visualization**:
-  - **Price Paths**: Interactive chart showing multiple simulated price trajectories
-  - **Price Distribution**: Histogram and kernel density estimation of final price distribution
-  - **Returns Distribution**: Histogram with normal distribution overlay for returns analysis
-  - **Probability Cone**: Fan chart showing price movement probability regions
-  - **Value at Risk (VaR)**: Visual representation of potential losses at different confidence levels
-  - **Heatmaps**: Correlation visualization between multiple stocks
-  - **Regime Detection**: Visualization of detected market regimes and transition probabilities
-  - **Jump Detection**: Highlighting detected jumps in historical price series
-  - **Drawdown Analysis**: Visualizing maximum drawdowns across simulations
-  - **Percentile Plots**: Showing how prices evolve across different percentiles
+## Local Development
 
-- **SP500 Integration**:
-  - Automatic retrieval of SP500 constituents
-  - Sector-based analysis
-  - Batch simulation capabilities
+To run this website locally:
 
-## Installation
+1. Clone the repository
+   ```
+   git clone https://github.com/yourusername/your-repo-name.git
+   cd your-repo-name
+   ```
 
-1. Clone the repository:
-```bash
-git clone https://github.com/EdenRochmanSharabi/stock-price-simulation
-cd stock-price-simulation
-```
+2. Open `docs/index.html` in your web browser
 
-2. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+## How it Works
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+This is a static website that uses HTML, CSS, and JavaScript to display pre-computed simulation results. No server-side processing is required, making it perfect for GitHub Pages hosting.
 
-## Usage
+The data was generated using the full Stock Price Simulation engine, with results saved as JSON files that are loaded by the front-end JavaScript.
 
-### Command Line Interface
+## Deploying to GitHub Pages
 
-Run simulations directly from the command line:
+1. Push this repository to GitHub
+2. Go to repository Settings → Pages
+3. Select the "main" branch and "/docs" folder
+4. Click Save
 
-```bash
-# Basic usage with default parameters (simulates AAPL)
-python run_simulation.py
+GitHub will automatically deploy the site and provide you with a URL.
 
-# Specify ticker symbols
-python run_simulation.py MSFT AAPL GOOGL
+## Customizing
 
-# Specify model type and parameters
-python run_simulation.py TSLA -m jump -p 5000 -s 63
-
-# Run simulation for a specific sector
-python run_simulation.py --sector "Information Technology" --sector-limit 5
-
-# Use random tickers
-python run_simulation.py --random 3
-
-# Advanced parameters
-python run_simulation.py AMZN -m hybrid --mu 0.1 --sigma 0.3 --jump-intensity 15
-```
-
-### Web API
-
-Run the simulation via a web API:
-
-```bash
-# Start the web server on port 8080
-python run_web_server.py
-```
-
-Once the server is running, you can:
-
-- Access the API documentation: http://localhost:8080/
-- Run simulations via HTTP requests:
-
-```bash
-# Run a simulation for AAPL
-curl -X POST http://localhost:8080/api/simulate \
-     -H "Content-Type: application/json" \
-     -d '{"ticker": "AAPL", "model_type": "hybrid", "paths": 1000, "steps": 21}'
-
-# Get available sectors
-curl -X GET http://localhost:8080/api/sectors
-
-# Get tickers in a specific sector
-curl -X GET http://localhost:8080/api/tickers/Technology
-
-# Run batch simulation
-curl -X POST http://localhost:8080/api/batch \
-     -H "Content-Type: application/json" \
-     -d '{"tickers": ["MSFT", "AAPL", "GOOGL"], "model_type": "gbm"}'
-```
-
-### Using the Python API
-
-You can also use the library in your own Python code:
-
-```python
-from stock_sim.models import ModelFactory
-from stock_sim.simulation_engine import SimulationEngine
-
-# Create a simulation engine
-engine = SimulationEngine(output_base_dir="results")
-
-# Run a simulation
-result = engine.run_simulation(
-    ticker="AAPL",
-    model_type="hybrid",
-    paths=1000,
-    steps=21,
-    calibrate=True,
-    lookback_period="2y"
-)
-
-# Access the results
-statistics = result['statistics']
-print(f"Expected return: {statistics['expected_return']:.2f}%")
-print(f"Probability of profit: {statistics['prob_profit']:.2f}%")
-```
-
-## Project Structure
-
-The project follows a modular, object-oriented structure:
-
-```
-stock_sim/
-├── models/                  # Simulation models
-│   ├── base_model.py        # Abstract base class
-│   ├── gbm_model.py         # Geometric Brownian Motion
-│   ├── jump_diffusion_model.py  # Jump Diffusion
-│   ├── hybrid_model.py      # Combined model
-│   └── factory.py           # Model factory
-├── analysis/                # Statistical analysis
-│   ├── statistics.py        # Statistical calculations
-│   ├── data_storage.py      # Data persistence
-│   └── reporting.py         # Report generation
-├── visualization/           # Data visualization
-│   └── plots.py             # Plotting functions
-├── utils/                   # Utilities
-│   └── sp500.py             # S&P 500 data manager
-├── interfaces/              # User interfaces
-│   └── cli.py               # Command-line interface
-└── simulation_engine.py     # Main simulation engine
-```
-
-## OOP Design Principles
-
-The implementation follows object-oriented design principles:
-
-1. **Encapsulation**:
-   - Private attributes with getter methods
-   - Clear separation of concerns
-
-2. **Abstraction**:
-   - Abstract base class for models
-   - Consistent interfaces
-
-3. **Inheritance**:
-   - Model hierarchy with specialized implementations
-   - Code reuse through inheritance
-
-4. **Polymorphism**:
-   - Model-agnostic simulation engine
-   - Factory pattern for model creation
+- Edit the files in the `docs` directory to customize the website
+- Run the simulation script to generate new data
+- Update the data files in `docs/data` with your new results
 
 ## License
 
