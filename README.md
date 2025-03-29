@@ -1,19 +1,36 @@
 # Stock Price Simulation with Regime Switching and Jump Diffusion
 
-A Monte Carlo simulation tool for stock price modeling that incorporates regime switching and jump diffusion processes. The tool provides a web interface for running simulations and generating reports.
+A Monte Carlo simulation tool for stock price modeling that incorporates regime switching and jump diffusion processes. The tool provides an object-oriented implementation following SOLID principles with proper encapsulation, abstraction, inheritance, and polymorphism.
 
 ## Features
 
-- Multiple simulation models:
-  - Geometric Brownian Motion (GBM)
-  - Jump Diffusion
-  - Combined (GBM + Jump Diffusion)
-- Regime switching capabilities
-- Automatic model calibration using historical data
-- Web interface for easy control and monitoring
-- Sector-based analysis
-- Support for S&P 500 stocks with automatic ticker updates
-- Detailed reporting and visualization
+- **Multiple Simulation Models**:
+  - **Geometric Brownian Motion (GBM)**: Standard model for stock price movements
+  - **Jump Diffusion**: Extends GBM with jumps to model market shocks
+  - **Hybrid Model**: Combines GBM, jumps, and volatility regime switching
+
+- **Object-Oriented Design**:
+  - Encapsulation of model parameters and data
+  - Abstraction through clear interfaces
+  - Inheritance for model specialization
+  - Polymorphism via the model interface
+  - Design patterns (Factory, Strategy)
+
+- **Comprehensive Analysis**:
+  - Statistical metrics (mean, variance, VaR, etc.)
+  - Risk measures (Sharpe ratio, Sortino ratio)
+  - Probability distributions
+  - Drawdown analysis
+
+- **Visualization**:
+  - Price path plots
+  - Probability distribution histograms
+  - Interactive HTML reports
+
+- **SP500 Integration**:
+  - Automatic retrieval of SP500 constituents
+  - Sector-based analysis
+  - Batch simulation capabilities
 
 ## Installation
 
@@ -25,8 +42,8 @@ cd stock-simulation
 
 2. Create and activate a virtual environment:
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
@@ -36,90 +53,133 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Start the web interface:
+### Command Line Interface
+
+Run simulations directly from the command line:
+
 ```bash
-python run_web_ui.py
+# Basic usage with default parameters (simulates AAPL)
+python run_simulation.py
+
+# Specify ticker symbols
+python run_simulation.py MSFT AAPL GOOGL
+
+# Specify model type and parameters
+python run_simulation.py TSLA -m jump -p 5000 -s 63
+
+# Run simulation for a specific sector
+python run_simulation.py --sector "Information Technology" --sector-limit 5
+
+# Use random tickers
+python run_simulation.py --random 3
+
+# Advanced parameters
+python run_simulation.py AMZN -m hybrid --mu 0.1 --sigma 0.3 --jump-intensity 15
 ```
 
-2. Open your web browser and navigate to `http://localhost:5000`
+### Web API
 
-3. Configure simulation parameters:
-   - Select simulation model
-   - Set number of paths and steps
-   - Choose sectors and number of companies per sector
-   - Configure model parameters (automatic or manual)
+Run the simulation via a web API:
 
-4. Click "Start Simulation" to begin
+```bash
+# Start the web server on port 8080
+python run_web_server.py
+```
 
-5. Monitor progress in real-time through the web interface
+Once the server is running, you can:
 
-6. View the generated report when complete
+- Access the API documentation: http://localhost:8080/
+- Run simulations via HTTP requests:
 
-## S&P 500 Tickers
+```bash
+# Run a simulation for AAPL
+curl -X POST http://localhost:8080/api/simulate \
+     -H "Content-Type: application/json" \
+     -d '{"ticker": "AAPL", "model_type": "hybrid", "paths": 1000, "steps": 21}'
 
-The application includes built-in support for S&P 500 stocks with the following features:
+# Get available sectors
+curl -X GET http://localhost:8080/api/sectors
 
-- Automatic retrieval of current S&P 500 constituents from Wikipedia
-- Sector-based organization of stocks
-- Ability to refresh ticker data at any time
-- Individual sector refresh capability
-- Persistent storage of ticker data in CSV format
+# Get tickers in a specific sector
+curl -X GET http://localhost:8080/api/tickers/Technology
 
-### Ticker Data Management
+# Run batch simulation
+curl -X POST http://localhost:8080/api/batch \
+     -H "Content-Type: application/json" \
+     -d '{"tickers": ["MSFT", "AAPL", "GOOGL"], "model_type": "gbm"}'
+```
 
-- Ticker data is stored in two CSV files:
-  - `sp500_tickers.csv`: List of all S&P 500 tickers
-  - `sp500_sectors.csv`: Sector mapping for all tickers
+### Using the Python API
 
-- The data can be refreshed in two ways:
-  1. Global refresh: Updates all S&P 500 tickers and sector mappings
-  2. Sector refresh: Updates tickers for a specific sector
+You can also use the library in your own Python code:
 
-## Simulation Models
+```python
+from stock_sim.models import ModelFactory
+from stock_sim.simulation_engine import SimulationEngine
 
-### 1. Geometric Brownian Motion (GBM)
+# Create a simulation engine
+engine = SimulationEngine(output_base_dir="results")
 
-The basic GBM model assumes stock prices follow a log-normal distribution with constant drift and volatility:
+# Run a simulation
+result = engine.run_simulation(
+    ticker="AAPL",
+    model_type="hybrid",
+    paths=1000,
+    steps=21,
+    calibrate=True,
+    lookback_period="2y"
+)
 
-\[ dS_t = \mu S_t dt + \sigma S_t dW_t \]
+# Access the results
+statistics = result['statistics']
+print(f"Expected return: {statistics['expected_return']:.2f}%")
+print(f"Probability of profit: {statistics['prob_profit']:.2f}%")
+```
 
-### 2. Jump Diffusion
+## Project Structure
 
-Incorporates sudden price jumps to model market shocks:
+The project follows a modular, object-oriented structure:
 
-\[ dS_t = \mu S_t dt + \sigma S_t dW_t + J_t dN_t \]
+```
+stock_sim/
+├── models/                  # Simulation models
+│   ├── base_model.py        # Abstract base class
+│   ├── gbm_model.py         # Geometric Brownian Motion
+│   ├── jump_diffusion_model.py  # Jump Diffusion
+│   ├── hybrid_model.py      # Combined model
+│   └── factory.py           # Model factory
+├── analysis/                # Statistical analysis
+│   ├── statistics.py        # Statistical calculations
+│   ├── data_storage.py      # Data persistence
+│   └── reporting.py         # Report generation
+├── visualization/           # Data visualization
+│   └── plots.py             # Plotting functions
+├── utils/                   # Utilities
+│   └── sp500.py             # S&P 500 data manager
+├── interfaces/              # User interfaces
+│   └── cli.py               # Command-line interface
+└── simulation_engine.py     # Main simulation engine
+```
 
-Where:
-- \( J_t \) is the jump size
-- \( N_t \) is a Poisson process
+## OOP Design Principles
 
-### 3. Combined Model
+The implementation follows object-oriented design principles:
 
-A hybrid model that combines GBM with jump diffusion and regime switching:
+1. **Encapsulation**:
+   - Private attributes with getter methods
+   - Clear separation of concerns
 
-\[ dS_t = \mu_i S_t dt + \sigma_i S_t dW_t + J_t dN_t \]
+2. **Abstraction**:
+   - Abstract base class for models
+   - Consistent interfaces
 
-Where \( i \) represents the current market regime.
+3. **Inheritance**:
+   - Model hierarchy with specialized implementations
+   - Code reuse through inheritance
 
-## Output
-
-The simulation generates:
-
-1. Price paths for each stock
-2. Statistical analysis including:
-   - Mean and standard deviation
-   - Value at Risk (VaR)
-   - Expected Shortfall
-   - Regime probabilities
-3. Visualizations:
-   - Price path plots
-   - Distribution plots
-   - Regime transition diagrams
-4. HTML reports with interactive elements
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+4. **Polymorphism**:
+   - Model-agnostic simulation engine
+   - Factory pattern for model creation
 
 ## License
 

@@ -872,19 +872,68 @@
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // Poll for status updates
+        // Function to poll simulation status
         function pollStatus() {
+            console.log("Polling status...");
+            
             fetch('/simulation_status')
                 .then(response => response.json())
                 .then(data => {
-                    simulationStatus = data;
-                    updateStatus();
+                    // Update UI with status
+                    document.getElementById('statusBadge').textContent = data.running ? 'Running' : 'Complete';
+                    document.getElementById('statusBadge').className = data.running ? 'status-badge running' : 'status-badge complete';
                     
+                    // Update progress bar
+                    document.getElementById('progressBar').style.width = `${data.progress}%`;
+                    
+                    // Update detail fields
+                    document.getElementById('totalStocks').textContent = data.total_stocks;
+                    document.getElementById('completedStocks').textContent = data.completed_stocks;
+                    document.getElementById('currentSector').textContent = data.current_sector || '-';
+                    document.getElementById('currentStock').textContent = data.current_stock || '-';
+                    
+                    // Update times if available
+                    if (data.elapsed_time) {
+                        document.getElementById('elapsedTime').textContent = data.elapsed_time;
+                    }
+                    if (data.remaining_time) {
+                        document.getElementById('timeRemaining').textContent = data.remaining_time;
+                    }
+                    
+                    // Enable the report button when complete
+                    if (!data.running && data.completed_stocks > 0) {
+                        document.getElementById('viewReport').disabled = false;
+                    }
+                    
+                    // Show errors if any
+                    const errorList = document.getElementById('errorList');
+                    errorList.innerHTML = '';
+                    if (data.errors && data.errors.length > 0) {
+                        errorList.innerHTML = '<h4>Errors:</h4>';
+                        const ul = document.createElement('ul');
+                        data.errors.forEach(error => {
+                            const li = document.createElement('li');
+                            li.textContent = error;
+                            ul.appendChild(li);
+                        });
+                        errorList.appendChild(ul);
+                    }
+                    
+                    // Continue polling if simulation is running
                     if (data.running) {
                         setTimeout(pollStatus, 1000);
+                    } else {
+                        // Re-enable start button when complete
+                        document.getElementById('startSimulation').disabled = false;
+                        document.getElementById('startSimulation').innerHTML = 'Start Simulation';
                     }
                 })
-                .catch(error => console.error('Error polling status:', error));
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                    // Re-enable button in case of error
+                    document.getElementById('startSimulation').disabled = false;
+                    document.getElementById('startSimulation').innerHTML = 'Start Simulation';
+                });
         }
         
         // Ticker selection functionality
@@ -961,6 +1010,7 @@
                     }
                 });
                 updateSelectedTickersDisplay();
+                console.log(`Sector ${sector} ${isChecked ? "selected" : "deselected"}, total selected tickers: ${selectedTickers.size}`);
             });
         });
 
@@ -1050,7 +1100,15 @@
         
         // View report
         document.getElementById('viewReport').addEventListener('click', () => {
-            window.open('/view_report', '_blank');
+            // First, check if a simulation has been run
+            const statusBadge = document.getElementById('statusBadge');
+            if (statusBadge.textContent === 'Complete' || document.getElementById('completedStocks').textContent !== '0') {
+                // If simulation completed, open the report
+                window.open('/view_report', '_blank');
+            } else {
+                // If no simulation has been run yet, show an alert
+                alert('Please run a simulation first before viewing the report.');
+            }
         });
         
         // Toggle manual parameters

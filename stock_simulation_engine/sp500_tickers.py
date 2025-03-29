@@ -151,20 +151,86 @@ def load_sector_mapping_from_csv(filename: str = "sp500_sectors.csv") -> Dict[st
         print(f"Warning: {filename} not found, retrieving fresh data...")
         return get_sector_mapping()
     
-    df = pd.read_csv(filename)
-    sector_mapping = {}
-    for _, row in df.iterrows():
-        sector = row["Sector"]
-        ticker = row["Ticker"]
-        if sector not in sector_mapping:
-            sector_mapping[sector] = []
-        sector_mapping[sector].append(ticker)
-    
-    # Sort tickers within each sector
-    for sector in sector_mapping:
-        sector_mapping[sector].sort()
-    
-    return sector_mapping
+    try:
+        df = pd.read_csv(filename)
+        
+        # Check if the file structure is correct (expected: Ticker,Sector)
+        if "Ticker" in df.columns and "Sector" in df.columns:
+            # Group by sector
+            sector_mapping = {}
+            for _, row in df.iterrows():
+                sector = row["Sector"]
+                ticker = row["Ticker"]
+                if sector not in sector_mapping:
+                    sector_mapping[sector] = []
+                sector_mapping[sector].append(ticker)
+            
+            # Sort tickers within each sector
+            for sector in sector_mapping:
+                sector_mapping[sector].sort()
+            
+            return sector_mapping
+        else:
+            print("Warning: CSV file does not have the expected columns. Attempting to group by industry sectors...")
+            
+            # If the CSV has a different structure, try to determine real sectors
+            # Use predefined sectors
+            industry_sectors = {
+                "Technology": [],
+                "Healthcare": [],
+                "Financial Services": [],
+                "Consumer Discretionary": [],
+                "Communication Services": [],
+                "Industrials": [],
+                "Consumer Staples": [],
+                "Energy": [],
+                "Utilities": [],
+                "Real Estate": [],
+                "Materials": [],
+                "Other": []  # Default sector
+            }
+            
+            # Assign companies to real sectors based on known mappings
+            sector_assignments = {
+                "AAPL": "Technology", "MSFT": "Technology", "AMZN": "Consumer Discretionary",
+                "GOOGL": "Communication Services", "GOOG": "Communication Services",
+                "META": "Communication Services", "TSLA": "Consumer Discretionary",
+                "NVDA": "Technology", "BRK-B": "Financial Services", "JPM": "Financial Services",
+                "XOM": "Energy", "JNJ": "Healthcare", "PG": "Consumer Staples",
+                "V": "Financial Services", "MA": "Financial Services", "BAC": "Financial Services",
+                "AVGO": "Technology", "CVX": "Energy", "ABBV": "Healthcare",
+                "PEP": "Consumer Staples", "COST": "Consumer Staples", "KO": "Consumer Staples",
+                "MRK": "Healthcare", "ADBE": "Technology", "WMT": "Consumer Staples",
+                "CRM": "Technology", "TMO": "Healthcare", "MCD": "Consumer Discretionary"
+            }
+            
+            tickers = df["Ticker"].tolist() if "Ticker" in df.columns else []
+            
+            # If tickers aren't in the expected column, try to find them
+            if not tickers and len(df.columns) >= 1:
+                tickers = df.iloc[:, 0].tolist()  # Use first column
+            
+            # Assign tickers to sectors
+            for ticker in tickers:
+                # Get sector from our predefined mapping, or default to "Other"
+                sector = sector_assignments.get(ticker, "Other")
+                industry_sectors[sector].append(ticker)
+            
+            # Return only sectors that have tickers
+            return {k: v for k, v in industry_sectors.items() if v}
+    except Exception as e:
+        print(f"Error loading sector mapping: {e}")
+        
+        # Create minimal sector mapping as fallback
+        sector_mapping = {"S&P 500": []}
+        try:
+            # Try to at least get the tickers
+            tickers = pd.read_csv(filename).iloc[:, 0].tolist()  # First column
+            sector_mapping["S&P 500"] = sorted(tickers)
+        except:
+            print("Could not read tickers from file")
+        
+        return sector_mapping
 
 if __name__ == "__main__":
     # Example usage

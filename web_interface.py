@@ -82,8 +82,19 @@ simulation_status = SimulationStatus()
 @app.route('/')
 def index():
     """Render the main simulation control page."""
+    global SECTORS
+    
+    # Reload sectors if empty
+    if not SECTORS:
+        SECTORS = load_sector_mapping_from_csv()
+    
     # Get sectors and count total stocks
     total_stocks = sum(len(tickers) for tickers in SECTORS.values())
+    
+    # Debug log to see sectors and counts
+    print(f"Loaded {len(SECTORS)} sectors with {total_stocks} total stocks")
+    for sector, tickers in SECTORS.items():
+        print(f"  - {sector}: {len(tickers)} stocks")
     
     return render_template('index.html', 
                           sectors=SECTORS, 
@@ -228,11 +239,12 @@ def start_simulation():
         if not selected_tickers:
             selected_sectors = request.form.getlist('sectors')
             if selected_sectors:
-                # Get tickers from selected sectors
+                # Get tickers from selected sectors - DO NOT LIMIT to 3 tickers
                 selected_tickers = []
                 for sector in selected_sectors:
                     if sector in SECTORS:
-                        selected_tickers.extend(SECTORS[sector][:3])  # Use up to 3 tickers per sector
+                        # Include ALL tickers in the sector
+                        selected_tickers.extend(SECTORS[sector])
             else:
                 # If still no tickers, use EXPE as default
                 selected_tickers = ['EXPE']
@@ -408,6 +420,15 @@ def get_simulation_status():
     
     return jsonify(status)
 
+@app.route('/api/simulations')
+def get_simulations():
+    """Get active simulations status (API compatibility endpoint)."""
+    # Return empty response for API compatibility
+    return jsonify({
+        "active": {},
+        "completed": []
+    })
+
 def format_time(seconds):
     """Format time in seconds to HH:MM:SS"""
     hours, remainder = divmod(int(seconds), 3600)
@@ -419,6 +440,41 @@ def view_report():
     """View the simulation report."""
     ticker = request.args.get('ticker', '')
     
+    # Find the main consolidated report first if no ticker specified
+    if not ticker:
+        # Look for main simulation report in standard location
+        main_report_names = ["consolidated_report.html", "simulation_report.html", "report.html", "index.html"]
+        
+        # Check in standard reports directory
+        reports_dir = os.path.join('output', 'reports')
+        if os.path.exists(reports_dir):
+            for report_name in main_report_names:
+                if os.path.exists(os.path.join(reports_dir, report_name)):
+                    return redirect(url_for('serve_report', path=report_name))
+        
+        # Check in timestamped directories
+        output_dir = 'output'
+        if os.path.exists(output_dir):
+            dirs = [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d)) and d.startswith('20')]
+            if dirs:
+                dirs.sort(reverse=True)
+                latest_dir = os.path.join(output_dir, dirs[0])
+                reports_dir = os.path.join(latest_dir, 'reports')
+                if os.path.exists(reports_dir):
+                    for report_name in main_report_names:
+                        if os.path.exists(os.path.join(reports_dir, report_name)):
+                            return redirect(url_for('serve_report', path=report_name))
+                            
+        # If we can't find a main report, try to find any HTML file in reports directory
+        if os.path.exists(reports_dir):
+            html_files = [f for f in os.listdir(reports_dir) if f.endswith('.html')]
+            if html_files:
+                return redirect(url_for('serve_report', path=html_files[0]))
+                
+        # Return a helpful message if no reports found
+        return "No simulation reports found. Please run a simulation first.", 404
+    
+    # Handle ticker-specific report
     if ticker:
         # Look for stock-specific report
         report_filename = f"{ticker}_report.html"
@@ -442,10 +498,13 @@ def view_report():
         
         return f"Stock report not found for {ticker}", 404
 
-# Ensure the app is exported for importing from run_web_ui.py
-if __name__ == '__main__':
+# This ensures app is available when imported
+if __name__ == "__main__":
+    # Parse command line arguments
     parser = argparse.ArgumentParser(description='Run the stock simulation web interface')
     # IMPORTANT: Always use port 8080 for this application (port 5000 conflicts with macOS AirPlay Receiver)
     parser.add_argument('--port', type=int, default=8080, help='Port to run the server on (use 8080, not 5000)')
     args = parser.parse_args()
+    
+    # Run the application directly if this script is executed
     app.run(debug=True, host='0.0.0.0', port=args.port) 
