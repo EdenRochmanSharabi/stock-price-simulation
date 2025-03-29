@@ -15,6 +15,8 @@ A comprehensive Monte Carlo simulation engine for stock price modeling with mult
   - [Jump Diffusion Model](#jump-diffusion-model)
   - [Hybrid Model](#hybrid-model)
 - [Parameters](#parameters)
+- [Object-Oriented Design](#object-oriented-design)
+- [Techniques](#techniques)
 - [Outputs](#outputs)
   - [Data Files](#data-files)
   - [Visualizations](#visualizations)
@@ -173,6 +175,29 @@ Combines GBM, jump diffusion, and volatility clustering to create a more realist
 | `jump_sigma` | float | 0.02 | Standard deviation of jump size |
 | `vol_clustering` | float | 0.85 | Volatility regime clustering parameter |
 
+## Object-Oriented Design
+
+The simulation engine is built using modern object-oriented design principles with a focus on:
+
+- **Factory Pattern**: Used in model creation to abstract the instantiation process and allow for flexible model selection at runtime
+- **Strategy Pattern**: Implemented to encapsulate different simulation algorithms and make them interchangeable
+
+These design patterns make the codebase highly extensible, allowing for easy addition of new simulation models and analytics without modifying existing code.
+
+## Techniques
+
+The engine implements various advanced financial modeling and statistical techniques:
+
+- **Monte Carlo Simulation**: Using random sampling to solve problems that might be deterministic in principle
+- **Markov Chain Regime Switching**: Modeling volatility clustering and market regime changes
+- **Stochastic Calculus**: Implementing Geometric Brownian Motion and other stochastic processes
+- **Poisson Process Modeling**: For simulating discrete jumps in asset prices
+- **Maximum Likelihood Estimation**: For parameter calibration from historical data
+- **Bootstrap Confidence Intervals**: For robust statistical inference
+- **Moment Matching**: Ensuring simulated returns match historical statistical properties
+- **Risk Metrics Calculation**: Implementing industry-standard risk measures
+- **Statistical Hypothesis Testing**: To validate model assumptions and results
+
 ## Outputs
 
 ### Data Files
@@ -184,11 +209,17 @@ Simulation data is saved in the [`output/data/`](./output/data/) directory:
 ### Visualizations
 
 Charts are saved in the [`output/graphs/`](./output/graphs/) directory:
-- Price paths chart
-- Price distribution histogram
-- Returns distribution histogram
-- Probability cone chart
-- Value at Risk (VaR) visualization
+
+- **Price Paths**: Interactive chart showing multiple simulated price trajectories
+- **Price Distribution**: Histogram and kernel density estimation of final price distribution
+- **Returns Distribution**: Histogram with normal distribution overlay for returns analysis
+- **Probability Cone**: Fan chart showing price movement probability regions
+- **Value at Risk (VaR)**: Visual representation of potential losses at different confidence levels
+- **Heatmaps**: Correlation visualization between multiple stocks
+- **Regime Detection**: Visualization of detected market regimes and transition probabilities
+- **Jump Detection**: Highlighting detected jumps in historical price series
+- **Drawdown Analysis**: Visualizing maximum drawdowns across simulations
+- **Percentile Plots**: Showing how prices evolve across different percentiles
 
 ### Reports
 

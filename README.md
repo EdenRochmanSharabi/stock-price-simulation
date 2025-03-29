@@ -36,7 +36,7 @@ A Monte Carlo simulation tool for stock price modeling that incorporates regime 
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/EdenRochmanSharabi/stock-price-simulation
 cd stock-simulation
 ```
 
