@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Simulation Results</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-dark navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                Stock Simulation
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#rankings">Rankings</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#stocks">Stocks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="about.html">About</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section class="bg-primary text-light p-5 text-center">
+        <div class="container">
+            <div class="d-flex flex-column align-items-center justify-content-between">
+                <h1><span class="text-warning">Stock Price Simulation</span> with Regime Switching and Jump Diffusion</h1>
+                <p class="lead my-4">
+                    Monte Carlo simulation results for S&P 500 stocks using a hybrid model that combines 
+                    Geometric Brownian Motion with Jump Diffusion and Regime Switching.
+                </p>
+                <div class="simulation-info">
+                    <div class="sim-param">
+                        <i class="bi bi-graph-up"></i>
+                        <span>10,000 Simulations</span>
+                    </div>
+                    <div class="sim-param">
+                        <i class="bi bi-calendar-range"></i>
+                        <span>21 Trading Days</span>
+                    </div>
+                    <div class="sim-param">
+                        <i class="bi bi-lightning"></i>
+                        <span>Hybrid Model</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="rankings" class="p-5">
+        <div class="container">
+            <h2 class="text-center mb-4">Top Performing Stocks</h2>
+            
+            <ul class="nav nav-tabs" id="rankingTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="returns-tab" data-bs-toggle="tab" data-bs-target="#returns-tab-pane" type="button" role="tab">Expected Return</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sharpe-tab" data-bs-toggle="tab" data-bs-target="#sharpe-tab-pane" type="button" role="tab">Sharpe Ratio</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sortino-tab" data-bs-toggle="tab" data-bs-target="#sortino-tab-pane" type="button" role="tab">Sortino Ratio</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content p-3 border border-top-0 rounded-bottom" id="rankingTabContent">
+                <div class="tab-pane fade show active" id="returns-tab-pane" role="tabpanel" aria-labelledby="returns-tab" tabindex="0">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="returnsChart"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <table class="table table-hover" id="returnsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Ticker</th>
+                                        <th>Expected Return</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- To be filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="sharpe-tab-pane" role="tabpanel" aria-labelledby="sharpe-tab" tabindex="0">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="sharpeChart"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <table class="table table-hover" id="sharpeTable">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Ticker</th>
+                                        <th>Sharpe Ratio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- To be filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="sortino-tab-pane" role="tabpanel" aria-labelledby="sortino-tab" tabindex="0">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="sortinoChart"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <table class="table table-hover" id="sortinoTable">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Ticker</th>
+                                        <th>Sortino Ratio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- To be filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="stocks" class="p-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-4">Browse All Stocks</h2>
+            
+            <div class="input-group mb-4">
+                <input type="text" class="form-control" id="stockSearch" placeholder="Search by ticker...">
+                <button class="btn btn-primary" type="button" id="searchButton">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+            
+            <div class="row g-4" id="stockCards">
+                <!-- To be filled by JavaScript -->
+                <div class="col-12 text-center" id="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading stock data...</p>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <button class="btn btn-primary" id="loadMoreBtn">Load More</button>
+            </div>
+        </div>
+    </section>
+
+    <div class="modal fade" id="stockModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="stockModalTitle">Stock Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="stockModalBody">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>Simulation Results</h4>
+                            <div id="stockModalStats"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h4>Final Value Distribution</h4>
+                            <img id="stockModalChart" src="" alt="Distribution Chart" class="img-fluid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="p-5 bg-dark text-white text-center">
+        <div class="container">
+            <p class="lead">Stock Simulation Project - GitHub Pages Edition</p>
+            <p>This is a static version of the stock simulation project that displays pre-computed Monte Carlo simulation results.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 
