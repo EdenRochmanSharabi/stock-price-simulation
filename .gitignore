@@ -109,3 +109,4 @@ dmypy.json
 data/*.csv
 results/
 *.npy GITHUB_SAVE/
+GITHUB_SAVE/

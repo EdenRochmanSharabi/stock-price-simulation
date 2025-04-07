@@ -48,6 +48,25 @@
             text-align: center;
         }
         
+        .nav-links {
+            margin-top: 15px;
+        }
+        
+        .nav-links .nav-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            margin: 0 8px;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s;
+        }
+        
+        .nav-links .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
         .form-group {
             margin-bottom: 24px;
             background: white;
@@ -519,7 +538,10 @@
 <body>
     <div class="header">
         <h1>Stock Price Simulation Control</h1>
-        <p>Configure and run Monte Carlo simulations for S&P 500 stocks</p>
+        <div class="nav-links">
+            <a href="/documentation" class="nav-link">View Documentation</a>
+            <a href="/lab" class="nav-link">Strategy Lab</a>
+        </div>
     </div>
 
     <div class="container">
@@ -622,6 +644,20 @@
                     </div>
                     <div class="parameter-description">
                         <strong>Effect:</strong> When checked, automatically estimates model parameters from historical data. Uncheck to manually set parameters below.
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="parameter-info">
+                    <div class="parameter-input">
+                        <label>
+                            <input type="checkbox" id="save_full_paths" name="save_full_paths">
+                            Save Full Path Data
+                        </label>
+                    </div>
+                    <div class="parameter-description">
+                        <strong>Effect:</strong> When checked, saves all path data to disk. Uncheck to save disk space (recommended for large simulations).
                     </div>
                 </div>
             </div>
@@ -1054,6 +1090,7 @@
             formData.append('time_step', document.getElementById('time_step').value);
             formData.append('lookback_period', document.getElementById('lookback_period').value);
             formData.append('calibrate', document.getElementById('calibrate').checked);
+            formData.append('save_full_paths', document.getElementById('save_full_paths').checked);
             
             // Add manual parameters if calibration is disabled
             if (!document.getElementById('calibrate').checked) {

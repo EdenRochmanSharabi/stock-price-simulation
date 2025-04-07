@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy Lab - Stock Price Simulation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css" rel="stylesheet">
+    <style>
+        .CodeMirror {
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .strategy-template {
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .results-container {
+            margin-top: 20px;
+        }
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Stock Price Simulation</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/lab">Strategy Lab</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/documentation">Documentation</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Strategy Lab</h1>
+        <p class="lead">Test your custom trading strategy against our model</p>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Strategy Parameters</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="strategyForm">
+                            <div class="mb-3">
+                                <label for="strategySelect" class="form-label">Select Pre-built Strategy</label>
+                                <select class="form-control" id="strategySelect" onchange="loadPrebuiltStrategy()">
+                                    <option value="">Custom Strategy</option>
+                                    <option value="sma_crossover">SMA Crossover (20/50)</option>
+                                    <option value="momentum">Momentum (12-month)</option>
+                                    <option value="mean_reversion">Mean Reversion</option>
+                                    <option value="rsi_strategy">RSI Strategy</option>
+                                    <option value="pairs_trading">Pairs Trading</option>
+                                    <option value="gbm_jump">GBM + Jump Diffusion</option>
+                                    <option value="long_short_mean_reversion">Long/Short Mean Reversion</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="startDate" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="endDate" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="initialCapital" class="form-label">Initial Capital ($)</label>
+                                <input type="number" class="form-control" id="initialCapital" value="100000" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="tickers" class="form-label">Tickers (comma-separated)</label>
+                                <input type="text" class="form-control" id="tickers" placeholder="AAPL,MSFT,GOOGL" required>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Active Strategies</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="activeStrategies" class="list-group">
+                            <!-- Active strategies will be listed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Strategy Template</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="strategy-template">
+def my_strategy(prices, dates, initial_capital):
+    """
+    Long/Short Trading Strategy Template
+    
+    This strategy demonstrates the ability to go long (buy), short (sell without owning),
+    or stay in cash based on market conditions.
+    
+    Parameters:
+    - prices: Dict[str, np.array] - Historical prices for each ticker
+    - dates: np.array - Array of dates
+    - initial_capital: float - Initial capital to invest
+    
+    Returns:
+    - Dict containing:
+        - 'portfolio_value': np.array - Portfolio value over time
+        - 'positions': Dict[str, np.array] - Position sizes for each ticker
+        - 'trades': List[Dict] - List of trades executed
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Initialize arrays for positions and portfolio value
+    n = len(price_data)
+    position = np.zeros(n)
+    portfolio_value = np.zeros(n)
+    
+    # Calculate simple moving averages
+    # Short window (5 days) and long window (20 days)
+    short_window = min(5, n-1)
+    long_window = min(20, n-1)
+    
+    # Initialize with cash
+    cash = initial_capital
+    shares = 0
+    
+    # Trading logic with short selling capability
+    for i in range(long_window, n):
+        # Calculate short and long moving averages
+        short_ma = np.mean(price_data[i-short_window:i])
+        long_ma = np.mean(price_data[i-long_window:i])
+        
+        # Current position state
+        is_long = shares > 0
+        is_short = shares < 0
+        is_cash = shares == 0
+        
+        # Strategy logic:
+        # 1. If short MA > long MA (bullish): go long
+        # 2. If short MA < long MA (bearish): go short
+        # 3. Otherwise: close positions and hold cash
+        
+        if short_ma > long_ma * 1.01:  # Bullish with 1% threshold
+            if is_short:  # Cover short position first
+                cash += shares * price_data[i]  # Cash increases (shares is negative)
+                shares = 0
+            
+            if is_cash:  # Then go long if in cash
+                shares = cash / price_data[i]
+                cash = 0
+                
+        elif short_ma < long_ma * 0.99:  # Bearish with 1% threshold
+            if is_long:  # Sell long position first
+                cash += shares * price_data[i]
+                shares = 0
+                
+            if is_cash:  # Then go short if in cash
+                # Short 50% of capital (more conservative)
+                short_allocation = cash * 0.5
+                shares = -short_allocation / price_data[i]  # Negative shares = short
+                # Keep remaining cash as collateral for the short position
+                cash -= short_allocation
+                
+        else:  # Neutral - close all positions
+            if is_long or is_short:
+                cash += shares * price_data[i]  # Works for both long and short
+                shares = 0
+        
+        # Record position for this day
+        position[i] = shares
+        
+        # Calculate portfolio value
+        # For long positions: cash + shares * price
+        # For short positions: cash + shares * price (shares is negative)
+        portfolio_value[i] = cash + shares * price_data[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:long_window] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []
+    }</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Your Strategy Code</h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="codeEditor"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <button class="btn btn-primary" onclick="addStrategy()">Add Strategy</button>
+                <button class="btn btn-success" onclick="runAllStrategies()">Run All Strategies</button>
+                <button class="btn btn-danger" onclick="clearStrategies()">Clear All</button>
+            </div>
+        </div>
+
+        <div class="results-container">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Results</h5>
+                </div>
+                <div class="card-body">
+                    <div id="resultsChart" class="chart-container"></div>
+                    <div id="performanceMetrics" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        // Initialize CodeMirror
+        var editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
+            mode: "python",
+            theme: "monokai",
+            lineNumbers: true,
+            indentUnit: 4,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            indentWithTabs: false
+        });
+
+        // Pre-built strategies
+        const prebuiltStrategies = {
+            sma_crossover: `def my_strategy(prices, dates, initial_capital):
+    """
+    Simple Moving Average Crossover Strategy (20/50)
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Calculate SMAs
+    sma20 = np.convolve(price_data, np.ones(20)/20, mode='valid')
+    sma50 = np.convolve(price_data, np.ones(50)/50, mode='valid')
+    
+    # Initialize arrays
+    position = np.zeros(len(price_data))
+    portfolio_value = np.zeros(len(price_data))
+    
+    # Pad the SMAs to match price data length
+    pad20 = np.full(19, np.nan)
+    pad50 = np.full(49, np.nan)
+    sma20 = np.concatenate([pad20, sma20])
+    sma50 = np.concatenate([pad50, sma50])
+    
+    # Initial position
+    cash = initial_capital
+    shares = 0
+    
+    # Trading logic
+    for i in range(50, len(price_data)):
+        if sma20[i] > sma50[i] and sma20[i-1] <= sma50[i-1]:  # Golden cross
+            shares = cash / price_data[i]
+            cash = 0
+        elif sma20[i] < sma50[i] and sma20[i-1] >= sma50[i-1]:  # Death cross
+            cash = shares * price_data[i]
+            shares = 0
+            
+        position[i] = shares
+        portfolio_value[i] = cash + shares * price_data[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:50] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []  # For simplicity, not tracking individual trades
+    }`,
+
+            momentum: `def my_strategy(prices, dates, initial_capital):
+    """
+    12-month Momentum Strategy
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Calculate 12-month momentum
+    momentum_window = 252  # Approximately 12 months of trading days
+    momentum = np.zeros(len(price_data))
+    position = np.zeros(len(price_data))
+    portfolio_value = np.zeros(len(price_data))
+    
+    # Initial position
+    cash = initial_capital
+    shares = 0
+    
+    # Trading logic
+    for i in range(momentum_window, len(price_data)):
+        momentum[i] = price_data[i] / price_data[i - momentum_window] - 1
+        
+        if momentum[i] > 0 and shares == 0:  # Positive momentum, buy
+            shares = cash / price_data[i]
+            cash = 0
+        elif momentum[i] < 0 and shares > 0:  # Negative momentum, sell
+            cash = shares * price_data[i]
+            shares = 0
+            
+        position[i] = shares
+        portfolio_value[i] = cash + shares * price_data[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:momentum_window] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []
+    }`,
+
+            mean_reversion: `def my_strategy(prices, dates, initial_capital):
+    """
+    Mean Reversion Strategy using Bollinger Bands
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Calculate Bollinger Bands
+    window = 20
+    num_std = 2
+    
+    rolling_mean = np.convolve(price_data, np.ones(window)/window, mode='valid')
+    rolling_std = np.array([np.std(price_data[i:i+window]) for i in range(len(price_data)-window+1)])
+    
+    # Pad the arrays to match price data length
+    pad = np.full(window-1, np.nan)
+    rolling_mean = np.concatenate([pad, rolling_mean])
+    rolling_std = np.concatenate([pad, rolling_std])
+    
+    upper_band = rolling_mean + (rolling_std * num_std)
+    lower_band = rolling_mean - (rolling_std * num_std)
+    
+    # Initialize arrays
+    position = np.zeros(len(price_data))
+    portfolio_value = np.zeros(len(price_data))
+    
+    # Initial position
+    cash = initial_capital
+    shares = 0
+    
+    # Trading logic
+    for i in range(window, len(price_data)):
+        if price_data[i] < lower_band[i] and shares == 0:  # Price below lower band, buy
+            shares = cash / price_data[i]
+            cash = 0
+        elif price_data[i] > upper_band[i] and shares > 0:  # Price above upper band, sell
+            cash = shares * price_data[i]
+            shares = 0
+            
+        position[i] = shares
+        portfolio_value[i] = cash + shares * price_data[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:window] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []
+    }`,
+
+            gbm_jump: `def my_strategy(prices, dates, initial_capital):
+    """
+    GBM + Jump Diffusion Trading Strategy
+    
+    This strategy uses a combination of Geometric Brownian Motion (GBM) and 
+    Jump Diffusion model to make trading decisions.
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Initialize arrays for positions and portfolio value
+    n = len(price_data)
+    position = np.zeros(n)
+    portfolio_value = np.zeros(n)
+    jumps = np.zeros(n, dtype=bool)
+    
+    # Need at least 2 data points for returns
+    if n < 2:
+        # Simple buy and hold for very short data
+        shares = initial_capital / price_data[0]
+        position[:] = shares
+        for i in range(n):
+            portfolio_value[i] = position[i] * price_data[i]
+        return {
+            'portfolio_value': portfolio_value,
+            'positions': {ticker: position},
+            'trades': []
+        }
+    
+    # Calculate log returns
+    log_returns = np.zeros(n)
+    for i in range(1, n):
+        log_returns[i] = np.log(price_data[i] / price_data[i-1])
+    
+    # Determine window size based on available data
+    window = min(10, n-1)  # Use smaller window if limited data
+    
+    # Calculate volatility (rolling window)
+    volatility = np.zeros(n)
+    dt = 1/252  # Daily time step
+    
+    # Calculate volatility only if we have enough data
+    if n > window:
+        for i in range(window, n):
+            # Make sure we don't go out of bounds
+            start_idx = max(0, i-window)
+            volatility[i] = np.std(log_returns[start_idx:i+1]) / np.sqrt(dt)
+        
+        # Fill initial volatilities
+        volatility[:window] = volatility[window]
+        
+        # Jump detection (log returns > 2.5 standard deviations)
+        jump_threshold = 2.5
+        for i in range(1, n):
+            if volatility[i] > 0 and abs(log_returns[i]) > jump_threshold * volatility[i] * np.sqrt(dt):
+                jumps[i] = True
+    
+    # Trading logic
+    cash = initial_capital
+    shares = 0
+    
+    # Only execute trading logic if we have enough data
+    if n > window + 1:
+        for i in range(window+1, n):
+            # Predict trend using GBM
+            # Make sure we don't go out of bounds
+            start_idx = max(0, i-window)
+            drift = np.mean(log_returns[start_idx:i])
+            expected_return = drift - 0.5 * volatility[i]**2 * dt
+            
+            # Detect regime
+            if jumps[i-1]:  # Jump occurred in the previous period
+                # After negative jump, buy if the price is likely to revert
+                if log_returns[i-1] < 0 and shares == 0:
+                    shares = cash / price_data[i]
+                    cash = 0
+                # After positive jump, sell if we own shares as the price might revert
+                elif log_returns[i-1] > 0 and shares > 0:
+                    cash = shares * price_data[i]
+                    shares = 0
+            else:  # Normal GBM regime
+                # Buy if positive expected return
+                if expected_return > 0 and shares == 0:
+                    shares = cash / price_data[i]
+                    cash = 0
+                # Sell if negative expected return
+                elif expected_return < 0 and shares > 0:
+                    cash = shares * price_data[i]
+                    shares = 0
+            
+            position[i] = shares
+            portfolio_value[i] = cash + shares * price_data[i]
+    else:
+        # For very short data, just do buy and hold
+        shares = initial_capital / price_data[0]
+        position[:] = shares
+    
+    # Calculate final portfolio values
+    for i in range(n):
+        if portfolio_value[i] == 0:  # If not set by the trading logic
+            portfolio_value[i] = cash + shares * price_data[i]
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []
+    }`,
+
+            rsi_strategy: `def my_strategy(prices, dates, initial_capital):
+    """
+    RSI (Relative Strength Index) Strategy
+    
+    Buy when RSI falls below 30 (oversold) and sell when RSI rises above 70 (overbought)
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Calculate RSI
+    window = 14  # Standard RSI period
+    n = len(price_data)
+    
+    # Need at least window+1 data points to calculate RSI
+    if n <= window:
+        # Simple buy and hold for very short data
+        position = np.full(n, initial_capital / price_data[0])
+        portfolio_value = position * price_data
+        return {
+            'portfolio_value': portfolio_value,
+            'positions': {ticker: position},
+            'trades': []
+        }
+    
+    # Calculate price changes
+    delta = np.zeros(n)
+    for i in range(1, n):
+        delta[i] = price_data[i] - price_data[i-1]
+    
+    # Separate gains and losses
+    gains = np.where(delta > 0, delta, 0)
+    losses = np.where(delta < 0, -delta, 0)
+    
+    # Initialize arrays
+    avg_gains = np.zeros(n)
+    avg_losses = np.zeros(n)
+    rs = np.zeros(n)
+    rsi = np.zeros(n)
+    
+    # Calculate first average gain and loss
+    avg_gains[window] = np.mean(gains[1:window+1])
+    avg_losses[window] = np.mean(losses[1:window+1])
+    
+    # Calculate subsequent average gains and losses
+    for i in range(window+1, n):
+        avg_gains[i] = (avg_gains[i-1] * (window-1) + gains[i]) / window
+        avg_losses[i] = (avg_losses[i-1] * (window-1) + losses[i]) / window
+    
+    # Calculate RS and RSI
+    for i in range(window, n):
+        if avg_losses[i] == 0:
+            rs[i] = 100  # Avoid division by zero
+        else:
+            rs[i] = avg_gains[i] / avg_losses[i]
+        rsi[i] = 100 - (100 / (1 + rs[i]))
+    
+    # Initialize arrays for positions and portfolio value
+    position = np.zeros(n)
+    portfolio_value = np.zeros(n)
+    
+    # Initial position
+    cash = initial_capital
+    shares = 0
+    
+    # Trading logic
+    for i in range(window+1, n):
+        if rsi[i-1] <= 30 and rsi[i] > 30 and shares == 0:  # RSI crosses above 30 (buy signal)
+            shares = cash / price_data[i]
+            cash = 0
+        elif rsi[i-1] < 70 and rsi[i] >= 70 and shares > 0:  # RSI crosses above 70 (sell signal)
+            cash = shares * price_data[i]
+            shares = 0
+        
+        position[i] = shares
+        portfolio_value[i] = cash + shares * price_data[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:window+1] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []
+    }`,
+
+            pairs_trading: `def my_strategy(prices, dates, initial_capital):
+    """
+    Pairs Trading Strategy
+    
+    This strategy trades pairs of stocks based on the spread between them.
+    Buy the underperformer and short the outperformer when the spread deviates,
+    and close positions when the spread reverts to the mean.
+    """
+    import numpy as np
+    
+    # We need at least two tickers for pairs trading
+    tickers = list(prices.keys())
+    if len(tickers) < 2:
+        # Fallback to buy and hold if only one ticker is available
+        ticker = tickers[0]
+        price_data = prices[ticker]
+        n = len(price_data)
+        position = np.full(n, initial_capital / price_data[0])
+        portfolio_value = position * price_data
+        return {
+            'portfolio_value': portfolio_value,
+            'positions': {ticker: position},
+            'trades': []
+        }
+    
+    # Use the first two tickers
+    ticker1 = tickers[0]
+    ticker2 = tickers[1]
+    price1 = prices[ticker1]
+    price2 = prices[ticker2]
+    
+    # Make sure both price arrays have the same length
+    n = min(len(price1), len(price2))
+    price1 = price1[:n]
+    price2 = price2[:n]
+    
+    # Normalize prices to start at 100
+    norm_price1 = price1 / price1[0] * 100
+    norm_price2 = price2 / price2[0] * 100
+    
+    # Calculate the spread
+    spread = norm_price1 - norm_price2
+    
+    # Calculate the z-score of the spread using a rolling window
+    window = min(20, n-1)  # Use a 20-day window or shorter if limited data
+    mean_spread = np.zeros(n)
+    std_spread = np.zeros(n)
+    z_score = np.zeros(n)
+    
+    # Calculate z-score only if we have enough data
+    if n > window:
+        for i in range(window, n):
+            mean_spread[i] = np.mean(spread[i-window:i])
+            std_spread[i] = np.std(spread[i-window:i])
+            if std_spread[i] > 0:  # Avoid division by zero
+                z_score[i] = (spread[i] - mean_spread[i]) / std_spread[i]
+    
+    # Initialize portfolio tracking
+    cash = initial_capital
+    position1 = np.zeros(n)  # Shares of ticker1
+    position2 = np.zeros(n)  # Shares of ticker2
+    portfolio_value = np.zeros(n)
+    portfolio_value[0] = initial_capital
+    
+    # Pairs trading logic
+    for i in range(window+1, n):
+        # Check if we have no position
+        if position1[i-1] == 0 and position2[i-1] == 0:
+            if z_score[i] > 1.0:  # Spread is high (ticker1 outperforming)
+                # Short ticker1, buy ticker2
+                allocation = cash / 2
+                position1[i] = -allocation / price1[i]  # Short position (negative)
+                position2[i] = allocation / price2[i]   # Long position
+                cash = 0
+            elif z_score[i] < -1.0:  # Spread is low (ticker2 outperforming)
+                # Buy ticker1, short ticker2
+                allocation = cash / 2
+                position1[i] = allocation / price1[i]    # Long position
+                position2[i] = -allocation / price2[i]   # Short position (negative)
+                cash = 0
+            else:  # No trade signal
+                position1[i] = position1[i-1]
+                position2[i] = position2[i-1]
+        else:  # We have an existing position
+            if abs(z_score[i]) < 0.2:  # Spread has reverted to mean
+                # Close positions
+                cash = position1[i-1] * price1[i] + position2[i-1] * price2[i] + cash
+                position1[i] = 0
+                position2[i] = 0
+            else:  # Maintain positions
+                position1[i] = position1[i-1]
+                position2[i] = position2[i-1]
+        
+        # Calculate portfolio value
+        portfolio_value[i] = cash + position1[i] * price1[i] + position2[i] * price2[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:window+1] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker1: position1, ticker2: position2},
+        'trades': []
+    }`,
+
+            long_short_mean_reversion: `def my_strategy(prices, dates, initial_capital):
+    """
+    Long/Short Mean Reversion Strategy
+    
+    This strategy identifies overbought and oversold conditions using Bollinger Bands
+    and takes long positions in oversold stocks and short positions in overbought stocks.
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Initialize arrays
+    n = len(price_data)
+    position = np.zeros(n)
+    portfolio_value = np.zeros(n)
+    
+    # Calculate Bollinger Bands
+    window = min(20, n-1)  # Use a 20-day window or shorter if limited data
+    num_std = 2  # Standard deviations for Bollinger Bands
+    
+    if n <= window:
+        # Simple buy and hold for very short data
+        shares = initial_capital / price_data[0]
+        position[:] = shares
+        portfolio_value = position * price_data
+        return {
+            'portfolio_value': portfolio_value,
+            'positions': {ticker: position},
+            'trades': []
+        }
+    
+    # Calculate moving average and standard deviation
+    rolling_mean = np.zeros(n)
+    rolling_std = np.zeros(n)
+    
+    for i in range(window, n):
+        rolling_mean[i] = np.mean(price_data[i-window:i])
+        rolling_std[i] = np.std(price_data[i-window:i])
+    
+    # Fill initial values
+    rolling_mean[:window] = np.nan
+    rolling_std[:window] = np.nan
+    
+    # Calculate Bollinger Bands
+    upper_band = rolling_mean + (rolling_std * num_std)
+    lower_band = rolling_mean - (rolling_std * num_std)
+    
+    # Position sizing parameters
+    long_allocation = 0.8  # 80% of capital for long positions
+    short_allocation = 0.4  # 40% of capital for short positions (more conservative)
+    
+    # Trading state
+    cash = initial_capital
+    shares = 0
+    
+    # Trading logic
+    for i in range(window, n):
+        # Determine current position state
+        is_long = shares > 0
+        is_short = shares < 0
+        is_cash = shares == 0
+        
+        # Calculate percent from mean (how far price is from moving average)
+        if rolling_mean[i] > 0:  # Avoid division by zero
+            percent_from_mean = (price_data[i] - rolling_mean[i]) / rolling_mean[i] * 100
+        else:
+            percent_from_mean = 0
+            
+        # Extremely oversold: Price below lower Bollinger Band
+        if price_data[i] < lower_band[i]:
+            if is_short:  # Cover short position
+                cash += shares * price_data[i]  # Cash increases (shares is negative)
+                shares = 0
+                
+            if is_cash and not np.isnan(lower_band[i]):  # Go long if in cash
+                shares = (cash * long_allocation) / price_data[i]
+                cash -= shares * price_data[i]
+                
+        # Extremely overbought: Price above upper Bollinger Band
+        elif price_data[i] > upper_band[i]:
+            if is_long:  # Sell long position
+                cash += shares * price_data[i]
+                shares = 0
+                
+            if is_cash and not np.isnan(upper_band[i]):  # Go short if in cash
+                short_position = (cash * short_allocation) / price_data[i]
+                shares = -short_position  # Negative shares = short
+                cash += short_position * price_data[i]  # Receive cash from short sale
+                
+        # Price returns to the mean: Close positions
+        elif abs(percent_from_mean) < 1.0:  # Within 1% of moving average
+            if is_long or is_short:
+                cash += shares * price_data[i]  # Works for both long and short
+                shares = 0
+        
+        # Update position and portfolio value for this day
+        position[i] = shares
+        # Portfolio value includes cash plus position value (which may be negative for shorts)
+        portfolio_value[i] = cash + shares * price_data[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:window] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []
+    }`
+        };
+
+        // Store active strategies
+        let activeStrategies = [];
+
+        // Load pre-built strategy
+        function loadPrebuiltStrategy() {
+            const strategyName = document.getElementById('strategySelect').value;
+            console.log("Loading strategy:", strategyName);
+            
+            if (strategyName && prebuiltStrategies[strategyName]) {
+                const strategyCode = prebuiltStrategies[strategyName];
+                console.log("Strategy code length:", strategyCode.length);
+                editor.setValue(strategyCode);
+                
+                // Add the strategy to active strategies without clearing existing ones
+                // Check if the strategy is already in the list to avoid duplicates
+                const existingIndex = activeStrategies.findIndex(s => s.name === strategyName);
+                if (existingIndex >= 0) {
+                    // Update existing strategy
+                    activeStrategies[existingIndex].code = strategyCode;
+                } else {
+                    // Add new strategy
+                    activeStrategies.push({
+                        name: strategyName,
+                        code: strategyCode
+                    });
+                }
+                updateActiveStrategiesList();
+                
+                // Clear any previous messages
+                document.getElementById('performanceMetrics').innerHTML = `
+                    <div class="alert alert-info">
+                        <h4>Strategy Added</h4>
+                        <p>The ${strategyName} strategy has been loaded and added to your active strategies.</p>
+                        <p>Click "Run All Strategies" to execute.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Initialize the editor with template
+        function loadTemplate() {
+            // Default template
+            const defaultTemplate = `def my_strategy(prices, dates, initial_capital):
+    """
+    Long/Short Trading Strategy Template
+    
+    This strategy demonstrates the ability to go long (buy), short (sell without owning),
+    or stay in cash based on market conditions.
+    
+    Parameters:
+    - prices: Dict[str, np.array] - Historical prices for each ticker
+    - dates: np.array - Array of dates
+    - initial_capital: float - Initial capital to invest
+    
+    Returns:
+    - Dict containing:
+        - 'portfolio_value': np.array - Portfolio value over time
+        - 'positions': Dict[str, np.array] - Position sizes for each ticker
+        - 'trades': List[Dict] - List of trades executed
+    """
+    import numpy as np
+    
+    # Get the first ticker's prices
+    ticker = list(prices.keys())[0]
+    price_data = prices[ticker]
+    
+    # Initialize arrays for positions and portfolio value
+    n = len(price_data)
+    position = np.zeros(n)
+    portfolio_value = np.zeros(n)
+    
+    # Calculate simple moving averages
+    # Short window (5 days) and long window (20 days)
+    short_window = min(5, n-1)
+    long_window = min(20, n-1)
+    
+    # Initialize with cash
+    cash = initial_capital
+    shares = 0
+    
+    # Trading logic with short selling capability
+    for i in range(long_window, n):
+        # Calculate short and long moving averages
+        short_ma = np.mean(price_data[i-short_window:i])
+        long_ma = np.mean(price_data[i-long_window:i])
+        
+        # Current position state
+        is_long = shares > 0
+        is_short = shares < 0
+        is_cash = shares == 0
+        
+        # Strategy logic:
+        # 1. If short MA > long MA (bullish): go long
+        # 2. If short MA < long MA (bearish): go short
+        # 3. Otherwise: close positions and hold cash
+        
+        if short_ma > long_ma * 1.01:  # Bullish with 1% threshold
+            if is_short:  # Cover short position first
+                cash += shares * price_data[i]  # Cash increases (shares is negative)
+                shares = 0
+            
+            if is_cash:  # Then go long if in cash
+                shares = cash / price_data[i]
+                cash = 0
+                
+        elif short_ma < long_ma * 0.99:  # Bearish with 1% threshold
+            if is_long:  # Sell long position first
+                cash += shares * price_data[i]
+                shares = 0
+                
+            if is_cash:  # Then go short if in cash
+                # Short 50% of capital (more conservative)
+                short_allocation = cash * 0.5
+                shares = -short_allocation / price_data[i]  # Negative shares = short
+                # Keep remaining cash as collateral for the short position
+                cash -= short_allocation
+                
+        else:  # Neutral - close all positions
+            if is_long or is_short:
+                cash += shares * price_data[i]  # Works for both long and short
+                shares = 0
+        
+        # Record position for this day
+        position[i] = shares
+        
+        # Calculate portfolio value
+        # For long positions: cash + shares * price
+        # For short positions: cash + shares * price (shares is negative)
+        portfolio_value[i] = cash + shares * price_data[i]
+    
+    # Fill initial portfolio values
+    portfolio_value[:long_window] = initial_capital
+    
+    return {
+        'portfolio_value': portfolio_value,
+        'positions': {ticker: position},
+        'trades': []
+    }`;
+            
+            editor.setValue(defaultTemplate);
+            console.log("Default template loaded, length:", defaultTemplate.length);
+            
+            // Set default date values
+            setDefaultDates();
+        }
+        
+        // Set default date values (today and one year ago)
+        function setDefaultDates() {
+            const today = new Date();
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(today.getFullYear() - 1);
+            
+            // Format dates as YYYY-MM-DD
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            document.getElementById('startDate').value = formatDate(oneYearAgo);
+            document.getElementById('endDate').value = formatDate(today);
+            
+            // Set random tickers
+            setRandomTickers();
+        }
+        
+        // Set random stock tickers
+        function setRandomTickers() {
+            // List of reliable stock tickers (most likely to have clean data)
+            const reliableTickers = [
+                'SPY',  // S&P 500 ETF
+                'QQQ',  // Nasdaq ETF
+                'AAPL', // Apple
+                'MSFT', // Microsoft
+                'AMZN', // Amazon
+                'GOOGL', // Alphabet
+                'BRK-B', // Berkshire Hathaway
+                'JNJ',  // Johnson & Johnson
+                'WMT',  // Walmart
+                'JPM'   // JPMorgan Chase
+            ];
+            
+            // Pick 3 random tickers without duplicates, always including SPY as an option
+            const randomTickers = ['SPY'];
+            
+            // Add two more unique tickers
+            while (randomTickers.length < 3) {
+                const randomIndex = Math.floor(Math.random() * reliableTickers.length);
+                const ticker = reliableTickers[randomIndex];
+                if (!randomTickers.includes(ticker)) {
+                    randomTickers.push(ticker);
+                }
+            }
+            
+            // Set the tickers in the input field
+            document.getElementById('tickers').value = randomTickers.join(',');
+            
+            // Add a note about data availability
+            document.getElementById('performanceMetrics').innerHTML = `
+                <div class="alert alert-info">
+                    <h4>Ready to run strategies</h4>
+                    <p>Default tickers selected. If you encounter data availability issues:</p>
+                    <ul>
+                        <li>Try using SPY (S&P 500 ETF) which has the most reliable data</li>
+                        <li>Consider shorter date ranges (last 6-12 months)</li>
+                        <li>Major US stocks like AAPL, MSFT, AMZN generally have better data availability</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Add current strategy to active strategies
+        function addStrategy() {
+            const code = editor.getValue();
+            
+            // Check if code is empty
+            if (!code || code.trim() === '') {
+                document.getElementById('performanceMetrics').innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>Empty Strategy Code</h4>
+                        <p>Please enter a strategy code before adding it.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const name = document.getElementById('strategySelect').value || 'Custom Strategy';
+            
+            console.log("Adding strategy:", name);
+            console.log("Code length:", code.length);
+            console.log("Code preview:", code.substring(0, 100) + "...");
+            
+            activeStrategies.push({
+                name: name,
+                code: code
+            });
+            
+            updateActiveStrategiesList();
+            
+            // Provide feedback
+            document.getElementById('performanceMetrics').innerHTML = `
+                <div class="alert alert-success">
+                    <h4>Strategy Added</h4>
+                    <p>Strategy "${name}" has been added successfully. Click "Run All Strategies" to execute.</p>
+                </div>
+            `;
+        }
+
+        // Update the active strategies list in the UI
+        function updateActiveStrategiesList() {
+            const container = document.getElementById('activeStrategies');
+            container.innerHTML = activeStrategies.map((strategy, index) => `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    ${strategy.name}
+                    <button class="btn btn-sm btn-danger" onclick="removeStrategy(${index})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        // Remove a strategy
+        function removeStrategy(index) {
+            activeStrategies.splice(index, 1);
+            updateActiveStrategiesList();
+        }
+
+        // Clear all strategies
+        function clearStrategies() {
+            activeStrategies = [];
+            updateActiveStrategiesList();
+        }
+
+        // Run all active strategies
+        function runAllStrategies() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const initialCapital = document.getElementById('initialCapital').value;
+            const tickers = document.getElementById('tickers').value;
+
+            // Clear previous results
+            document.getElementById('performanceMetrics').innerHTML = '';
+            document.getElementById('resultsChart').innerHTML = '';
+
+            // Check if there are any active strategies
+            if (activeStrategies.length === 0) {
+                document.getElementById('performanceMetrics').innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>No strategies to run</h4>
+                        <p>Please add at least one strategy before running.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Check if required fields are filled
+            if (!startDate || !endDate || !initialCapital || !tickers) {
+                document.getElementById('performanceMetrics').innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>Missing parameters</h4>
+                        <p>Please fill in all required fields: Start Date, End Date, Initial Capital, and Tickers.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Show loading indicator
+            document.getElementById('performanceMetrics').innerHTML = `
+                <div class="alert alert-info">
+                    <h4>Running strategies...</h4>
+                    <p>Please wait while your strategies are being executed.</p>
+                </div>
+            `;
+
+            console.log("Running strategies:", activeStrategies.length);
+            activeStrategies.forEach((strat, i) => {
+                console.log(`Strategy ${i+1}: ${strat.name}, code length: ${strat.code.length}`);
+            });
+
+            Promise.all(activeStrategies.map(strategy => {
+                console.log(`Executing strategy: ${strategy.name}`);
+                const requestData = {
+                    code: strategy.code,
+                    start_date: startDate,
+                    end_date: endDate,
+                    initial_capital: parseFloat(initialCapital),
+                    tickers: tickers.split(',').map(t => t.trim())
+                };
+                console.log("Request data:", JSON.stringify(requestData));
+                
+                return fetch('/run_strategy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                }).then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            console.error("Server error:", err);
+                            throw new Error(err.error || 'Strategy execution failed');
+                        });
+                    }
+                    return response.json();
+                });
+            })).then(results => {
+                displayMultipleResults(results, activeStrategies.map(s => s.name));
+            }).catch(error => {
+                console.error('Error:', error);
+                document.getElementById('performanceMetrics').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4>Error running strategies:</h4>
+                        <p>${error.message}</p>
+                        <p>Please check your strategy code for errors and try again.</p>
+                    </div>
+                `;
+                document.getElementById('resultsChart').innerHTML = '';
+            });
+        }
+
+        // Display results for multiple strategies
+        function displayMultipleResults(results, strategyNames) {
+            // Check if results array is empty
+            if (!results || results.length === 0) {
+                document.getElementById('performanceMetrics').innerHTML = `
+                    <div class="alert alert-warning">
+                        <h4>No results available</h4>
+                        <p>No strategy results were returned. Please check your strategy code and try again.</p>
+                    </div>
+                `;
+                document.getElementById('resultsChart').innerHTML = '';
+                return;
+            }
+
+            const traces = results.map((data, i) => ({
+                x: data.dates,
+                y: data.portfolio_value,
+                type: 'scatter',
+                name: strategyNames[i]
+            }));
+
+            // Add model comparison
+            traces.push({
+                x: results[0].dates,
+                y: results[0].model_portfolio_value,
+                type: 'scatter',
+                name: results[0].model_name || 'Buy & Hold'  // Use model_name if available, fallback to 'Buy & Hold'
+            });
+            
+            // Add individual ticker trajectories
+            if (results[0].ticker_trajectories) {
+                for (const [ticker, trajectory] of Object.entries(results[0].ticker_trajectories)) {
+                    traces.push({
+                        x: results[0].dates,
+                        y: trajectory,
+                        type: 'scatter',
+                        name: `${ticker} (Hold)`,
+                        line: {
+                            dash: 'dot',  // Use dotted line for ticker trajectories
+                            width: 1.5
+                        }
+                    });
+                }
+            }
+
+            const layout = {
+                title: 'Portfolio Value Comparison',
+                xaxis: { title: 'Date' },
+                yaxis: { title: 'Portfolio Value ($)' },
+                legend: {
+                    orientation: 'h',
+                    y: -0.2
+                }
+            };
+
+            Plotly.newPlot('resultsChart', traces, layout);
+
+            // Display metrics
+            const metricsHtml = `
+                <h4>Performance Metrics</h4>
+                <table class="table">
+                    <tr>
+                        <th>Metric</th>
+                        ${strategyNames.map(name => `<th>${name}</th>`).join('')}
+                        <th>${results[0].model_name || 'Buy & Hold'}</th>
+                    </tr>
+                    <tr>
+                        <td>Total Return</td>
+                        ${results.map(data => 
+                            `<td>${(data.strategy_return * 100).toFixed(2)}%</td>`
+                        ).join('')}
+                        <td>${(results[0].model_return * 100).toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td>Sharpe Ratio</td>
+                        ${results.map(data => 
+                            `<td>${data.strategy_sharpe.toFixed(2)}</td>`
+                        ).join('')}
+                        <td>${results[0].model_sharpe.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td>Max Drawdown</td>
+                        ${results.map(data => 
+                            `<td>${(data.strategy_max_drawdown * 100).toFixed(2)}%</td>`
+                        ).join('')}
+                        <td>${(results[0].model_max_drawdown * 100).toFixed(2)}%</td>
+                    </tr>
+                    <tr>
+                        <td>Outperformed Market</td>
+                        ${results.map(data => {
+                            const outperformed = data.strategy_return > results[0].model_return;
+                            const cellClass = outperformed ? 'text-success' : 'text-danger';
+                            const cellIcon = outperformed ? '✓' : '✗';
+                            return `<td class="${cellClass} fw-bold">${cellIcon} ${outperformed ? 'Yes' : 'No'}</td>`;
+                        }).join('')}
+                        <td>-</td>
+                    </tr>
+                </table>
+            `;
+            document.getElementById('performanceMetrics').innerHTML = metricsHtml;
+        }
+
+        // Initialize
+        loadTemplate();
+    </script>
+</body>
+</html> 

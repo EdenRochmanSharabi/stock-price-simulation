@@ -6,11 +6,17 @@ Plots Module
 Functions for creating visualizations of simulation results.
 """
 
+# Set non-interactive backend before importing matplotlib
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for thread safety
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy.stats as stats
+import yfinance as yf
+from datetime import datetime
 
 
 def set_plotting_style():
@@ -330,9 +336,91 @@ def create_risk_reward_plot(ticker, paths, statistics):
     return fig
 
 
+def create_yearly_returns_plot(ticker):
+    """
+    Create a visualization of daily returns by year, similar to the S&P 500 visualization shown.
+    
+    Args:
+        ticker (str): Stock ticker symbol
+        
+    Returns:
+        matplotlib.figure.Figure: The generated figure
+    """
+    set_plotting_style()
+    
+    # Define color palette for years
+    year_colors = {
+        2020: '#e83e8c',  # Pink
+        2021: '#75c175',  # Green
+        2022: '#4e73df',  # Blue
+        2023: '#343a40',  # Dark gray
+        2024: '#20c997',  # Teal
+        2025: '#e83e8c',  # Pink (reusing for 2025)
+    }
+    
+    # Get current year
+    current_year = datetime.now().year
+    
+    # Download 5 years of historical data
+    data = yf.download(ticker, period="5y", progress=False)
+    
+    # Calculate daily returns
+    data['DailyReturn'] = data['Close'].pct_change() * 100
+    
+    # Add year column
+    data['Year'] = data.index.year
+    
+    # Create figure
+    plt.figure(figsize=(14, 10))
+    
+    # Filter data to include only the last 5 years + current year
+    years = sorted(list(set(data['Year'])))[-6:]
+    
+    # Calculate the vertical positions for each year (from bottom to top)
+    year_positions = {year: i for i, year in enumerate(years)}
+    
+    # Plot returns for each year
+    for year in years:
+        year_data = data[data['Year'] == year]
+        
+        # Skip years with insufficient data
+        if len(year_data) < 5:
+            continue
+            
+        # Get color for this year
+        color = year_colors.get(year, '#777777')  # Default gray if year not in palette
+        
+        # Plot the points
+        plt.scatter(
+            year_data['DailyReturn'],  # x-values (returns)
+            [year_positions[year]] * len(year_data),  # y-values (fixed for each year)
+            color=color,
+            alpha=0.7,
+            s=50,  # Size of dots
+            label=str(year)
+        )
+    
+    # Customize y-axis to show year labels
+    plt.yticks(list(year_positions.values()), list(year_positions.keys()))
+    
+    # Add grid lines for returns
+    plt.grid(axis='x', linestyle='--', alpha=0.7)
+    
+    # Set limits and labels
+    plt.xlim(-12, 8)
+    plt.xlabel('Daily Returns (%)', fontsize=14)
+    plt.title(f'{ticker} Daily Returns by Year', fontsize=18, fontweight='bold')
+    
+    # Add a vertical line at 0%
+    plt.axvline(0, color='black', linestyle='-', alpha=0.3)
+    
+    plt.tight_layout()
+    return plt.gcf()
+
+
 def generate_plots(ticker, paths, statistics, output_dir):
     """
-    Generate and save plots for simulation results.
+    Generate and save all plots for simulation results.
     
     Args:
         ticker (str): Stock ticker symbol
@@ -341,61 +429,61 @@ def generate_plots(ticker, paths, statistics, output_dir):
         output_dir (str): Directory to save plots
         
     Returns:
-        dict: Paths to saved plots
+        dict: Dictionary of plot file paths
     """
     # Ensure output directory exists
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-        
-    # Create and save price path plot
-    price_fig = create_price_path_plot(ticker, paths, statistics)
-    price_path = os.path.join(output_dir, f"{ticker}_paths.png")
-    price_fig.savefig(price_path)
-    plt.close(price_fig)
+    
+    # Create and save price paths plot
+    price_path_fig = create_price_path_plot(ticker, paths, statistics)
+    price_path_file = os.path.join(output_dir, f"{ticker}_price_paths.png")
+    price_path_fig.savefig(price_path_file, dpi=100)
+    plt.close(price_path_fig)
     
     # Create and save distribution plot
-    dist_fig = create_distribution_plot(ticker, paths, statistics)
-    dist_path = os.path.join(output_dir, f"{ticker}_distribution.png")
-    dist_fig.savefig(dist_path)
-    plt.close(dist_fig)
+    distribution_fig = create_distribution_plot(ticker, paths, statistics)
+    distribution_file = os.path.join(output_dir, f"{ticker}_price_histogram.png")
+    distribution_fig.savefig(distribution_file, dpi=100)
+    plt.close(distribution_fig)
     
     # Create and save return histogram plot
     return_hist_fig = create_return_histogram_plot(ticker, paths, statistics)
-    return_hist_path = os.path.join(output_dir, f"{ticker}_return_histogram.png")
-    return_hist_fig.savefig(return_hist_path)
+    return_hist_file = os.path.join(output_dir, f"{ticker}_return_histogram.png")
+    return_hist_fig.savefig(return_hist_file, dpi=100)
     plt.close(return_hist_fig)
     
     # Create and save QQ plot
     qq_fig = create_qq_plot(ticker, paths, statistics)
-    qq_path = os.path.join(output_dir, f"{ticker}_qq_plot.png")
-    qq_fig.savefig(qq_path)
+    qq_file = os.path.join(output_dir, f"{ticker}_qq_plot.png")
+    qq_fig.savefig(qq_file, dpi=100)
     plt.close(qq_fig)
     
     # Create and save returns boxplot
     boxplot_fig = create_returns_boxplot(ticker, paths, statistics)
-    boxplot_path = os.path.join(output_dir, f"{ticker}_returns_boxplot.png")
-    boxplot_fig.savefig(boxplot_path)
+    boxplot_file = os.path.join(output_dir, f"{ticker}_returns_boxplot.png")
+    boxplot_fig.savefig(boxplot_file, dpi=100)
     plt.close(boxplot_fig)
     
     # Create and save risk-reward plot
     risk_reward_fig = create_risk_reward_plot(ticker, paths, statistics)
-    risk_reward_path = os.path.join(output_dir, f"{ticker}_risk_reward.png")
-    risk_reward_fig.savefig(risk_reward_path)
+    risk_reward_file = os.path.join(output_dir, f"{ticker}_risk_reward.png")
+    risk_reward_fig.savefig(risk_reward_file, dpi=100)
     plt.close(risk_reward_fig)
     
-    print(f"Generated plots for {ticker} saved to:")
-    print(f"  - Price paths: {price_path}")
-    print(f"  - Distribution: {dist_path}")
-    print(f"  - Return histogram: {return_hist_path}")
-    print(f"  - QQ plot: {qq_path}")
-    print(f"  - Returns boxplot: {boxplot_path}")
-    print(f"  - Risk-reward analysis: {risk_reward_path}")
+    # Create and save yearly returns plot
+    yearly_returns_fig = create_yearly_returns_plot(ticker)
+    yearly_returns_file = os.path.join(output_dir, f"{ticker}_yearly_returns.png")
+    yearly_returns_fig.savefig(yearly_returns_file, dpi=100)
+    plt.close(yearly_returns_fig)
     
+    # Return dictionary of plot paths
     return {
-        'paths': price_path,
-        'distribution': dist_path,
-        'return_histogram': return_hist_path,
-        'qq_plot': qq_path,
-        'returns_boxplot': boxplot_path,
-        'risk_reward': risk_reward_path
+        'paths': price_path_file,
+        'distribution': distribution_file,
+        'return_histogram': return_hist_file,
+        'qq_plot': qq_file,
+        'returns_boxplot': boxplot_file,
+        'risk_reward': risk_reward_file,
+        'yearly_returns': yearly_returns_file
     } 

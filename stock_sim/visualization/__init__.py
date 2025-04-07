@@ -11,7 +11,8 @@ from .plots import (
     create_return_histogram_plot,
     create_qq_plot,
     create_returns_boxplot,
-    create_risk_reward_plot
+    create_risk_reward_plot,
+    create_yearly_returns_plot
 )
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     'create_return_histogram_plot',
     'create_qq_plot',
     'create_returns_boxplot',
-    'create_risk_reward_plot'
+    'create_risk_reward_plot',
+    'create_yearly_returns_plot'
 ] 

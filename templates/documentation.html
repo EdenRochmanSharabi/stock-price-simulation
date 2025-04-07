@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Simulation Documentation</title>
+    <!-- MathJax for LaTeX rendering -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 32px;
+            margin-bottom: 30px;
+        }
+        
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .formula {
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .nav-link {
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+        
+        .implementation-note {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f4f8;
+            border-radius: 4px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Stock Price Simulation Documentation</h1>
+        <a href="/" class="nav-link">← Back to Simulation</a>
+    </div>
+    
+    <div class="container">
+        <div class="section">
+            <h2>Table of Contents</h2>
+            <ul>
+                <li><a href="#models" class="nav-link">Simulation Models</a></li>
+                <li><a href="#calibration" class="nav-link">Model Calibration</a></li>
+                <li><a href="#statistics" class="nav-link">Statistical Measures</a></li>
+                <li><a href="#risk-metrics" class="nav-link">Risk Metrics</a></li>
+                <li><a href="#mcts" class="nav-link">Monte Carlo Tree Search</a></li>
+                <li><a href="#implementation" class="nav-link">Implementation Details</a></li>
+            </ul>
+        </div>
+
+        <div id="models" class="section">
+            <h2>Simulation Models</h2>
+            
+            <div class="formula">
+                <h3>Geometric Brownian Motion (GBM)</h3>
+                <p>The basic model for continuous price changes:</p>
+                \[ dS_t = \mu S_t dt + \sigma S_t dW_t \]
+                where:
+                <ul>
+                    <li>\(S_t\) is the stock price at time t</li>
+                    <li>\(\mu\) is the drift (expected return)</li>
+                    <li>\(\sigma\) is the volatility</li>
+                    <li>\(dW_t\) is a Wiener process increment</li>
+                </ul>
+                <div class="implementation-note">
+                    Implementation: Uses Euler-Maruyama discretization with \(\Delta t\) timesteps.
+                </div>
+            </div>
+            
+            <div class="formula">
+                <h3>Jump Diffusion Model</h3>
+                <p>Adds sudden price jumps to the continuous process:</p>
+                \[ dS_t = \mu S_t dt + \sigma S_t dW_t + S_t dJ_t \]
+                where:
+                <ul>
+                    <li>\(J_t\) is a compound Poisson process</li>
+                    <li>\(\lambda\) is the jump intensity (jumps per year)</li>
+                    <li>\(\mu_J\) is the mean jump size</li>
+                    <li>\(\sigma_J\) is the jump size volatility</li>
+                </ul>
+                <div class="implementation-note">
+                    Jump sizes follow a lognormal distribution: \(\ln(1 + J) \sim N(\mu_J, \sigma_J^2)\)
+                </div>
+            </div>
+            
+            <div class="formula">
+                <h3>Combined Model</h3>
+                <p>Merges GBM with Jump Diffusion and adds regime switching:</p>
+                \[ dS_t = \mu(r_t) S_t dt + \sigma(r_t) S_t dW_t + S_t dJ_t \]
+                where:
+                <ul>
+                    <li>\(r_t\) is the current regime state</li>
+                    <li>\(\mu(r_t), \sigma(r_t)\) are regime-dependent parameters</li>
+                </ul>
+                <div class="implementation-note">
+                    Regimes switch according to a Markov chain with transition matrix P.
+                </div>
+            </div>
+        </div>
+
+        <div id="calibration" class="section">
+            <h2>Model Calibration</h2>
+            
+            <div class="formula">
+                <h3>Maximum Likelihood Estimation</h3>
+                <p>For GBM parameters:</p>
+                \[ \hat{\mu} = \frac{1}{T} \sum_{i=1}^{n} \ln\left(\frac{S_i}{S_{i-1}}\right) + \frac{\sigma^2}{2} \]
+                \[ \hat{\sigma}^2 = \frac{1}{T} \sum_{i=1}^{n} \left(\ln\left(\frac{S_i}{S_{i-1}}\right) - \hat{\mu}\right)^2 \]
+            </div>
+            
+            <div class="formula">
+                <h3>Jump Detection</h3>
+                <p>Identifies jumps using a threshold approach:</p>
+                \[ J_t = \begin{cases} 
+                1 & \text{if } |\Delta \ln S_t| > k\sigma\sqrt{\Delta t} \\
+                0 & \text{otherwise}
+                \end{cases} \]
+                where k is typically set to 3 (3-sigma events).
+            </div>
+            
+            <div class="formula">
+                <h3>Regime Detection</h3>
+                <p>Uses Hidden Markov Models to identify volatility regimes:</p>
+                \[ P(r_t | S_{1:t}) \propto P(S_t | r_t) \sum_{r_{t-1}} P(r_t | r_{t-1}) P(r_{t-1} | S_{1:t-1}) \]
+            </div>
+        </div>
+
+        <div id="statistics" class="section">
+            <h2>Statistical Measures</h2>
+            
+            <div class="formula">
+                <h3>Returns and Volatility</h3>
+                <p>Log returns:</p>
+                \[ r_t = \ln\left(\frac{S_t}{S_{t-1}}\right) \]
+                <p>Annualized volatility:</p>
+                \[ \sigma_{ann} = \sqrt{\frac{252}{n} \sum_{i=1}^n (r_i - \bar{r})^2} \]
+            </div>
+            
+            <div class="formula">
+                <h3>Higher Moments</h3>
+                <p>Skewness:</p>
+                \[ Skew = \frac{1}{n\sigma^3} \sum_{i=1}^n (r_i - \bar{r})^3 \]
+                <p>Excess Kurtosis:</p>
+                \[ Kurt = \frac{1}{n\sigma^4} \sum_{i=1}^n (r_i - \bar{r})^4 - 3 \]
+            </div>
+        </div>
+
+        <div id="risk-metrics" class="section">
+            <h2>Risk Metrics</h2>
+            
+            <div class="formula">
+                <h3>Value at Risk (VaR)</h3>
+                For confidence level α:
+                \[ VaR_{\alpha} = -\inf\{x \in \mathbb{R}: P(X \leq x) \geq \alpha\} \]
+                where X represents the profit/loss distribution.
+            </div>
+            
+            <div class="formula">
+                <h3>Maximum Drawdown</h3>
+                \[ MDD = \max_{t,s \leq t} \left(\frac{\max_{s \leq u \leq t} S_u - S_t}{\max_{s \leq u \leq t} S_u}\right) \]
+                <div class="implementation-note">
+                    Calculated using a rolling window approach for computational efficiency.
+                </div>
+            </div>
+            
+            <div class="formula">
+                <h3>Risk-Adjusted Returns</h3>
+                <p>Sharpe Ratio:</p>
+                \[ SR = \frac{R - r_f}{\sigma_R} \]
+                <p>Sortino Ratio:</p>
+                \[ SortR = \frac{R - r_f}{\sigma_D} \]
+                where \(\sigma_D\) is the downside deviation.
+            </div>
+        </div>
+
+        <div id="mcts" class="section">
+            <h2>Monte Carlo Tree Search</h2>
+            
+            <div class="formula">
+                <h3>Overview</h3>
+                <p>Monte Carlo Tree Search (MCTS) is implemented to optimize trading strategies by exploring the decision space of potential actions. The algorithm builds a search tree by iteratively selecting, expanding, simulating, and backpropagating results.</p>
+                
+                <p>The MCTS implementation follows the standard four phases:</p>
+                <ol>
+                    <li><strong>Selection:</strong> Traverse the tree from root to leaf using UCB1 formula</li>
+                    <li><strong>Expansion:</strong> Add one or more child nodes to the selected leaf</li>
+                    <li><strong>Simulation:</strong> Run a random simulation from the expanded node</li>
+                    <li><strong>Backpropagation:</strong> Update node statistics based on simulation results</li>
+                </ol>
+            </div>
+            
+            <div class="formula">
+                <h3>Upper Confidence Bound (UCB1)</h3>
+                <p>The UCB1 formula balances exploration and exploitation:</p>
+                \[ UCB1 = \bar{X}_j + c\sqrt{\frac{2\ln n}{n_j}} \]
+                where:
+                <ul>
+                    <li>\(\bar{X}_j\) is the mean reward of child j</li>
+                    <li>\(n\) is the number of visits to the parent node</li>
+                    <li>\(n_j\) is the number of visits to child j</li>
+                    <li>\(c\) is the exploration parameter (typically \(\sqrt{2}\))</li>
+                </ul>
+                <div class="implementation-note">
+                    The exploration parameter \(c\) can be tuned to control the balance between exploration and exploitation.
+                </div>
+            </div>
+            
+            <div class="formula">
+                <h3>State Representation</h3>
+                <p>The state space for the MCTS is defined as:</p>
+                \[ S = (P, V, R, H) \]
+                where:
+                <ul>
+                    <li>\(P\) is the current price</li>
+                    <li>\(V\) is the current volatility</li>
+                    <li>\(R\) is the current regime</li>
+                    <li>\(H\) is the historical price window</li>
+                </ul>
+                <div class="implementation-note">
+                    The state is discretized to make the search space manageable, with appropriate binning for continuous variables.
+                </div>
+            </div>
+            
+            <div class="formula">
+                <h3>Action Space</h3>
+                <p>The action space consists of possible trading decisions:</p>
+                \[ A = \{a_1, a_2, ..., a_n\} \]
+                where each action \(a_i\) represents a specific trading decision such as:
+                <ul>
+                    <li>Buy a specific quantity</li>
+                    <li>Sell a specific quantity</li>
+                    <li>Hold current position</li>
+                    <li>Adjust stop-loss levels</li>
+                </ul>
+            </div>
+            
+            <div class="formula">
+                <h3>Reward Function</h3>
+                <p>The reward function combines multiple objectives:</p>
+                \[ R(s, a) = w_1R_{return}(s, a) + w_2R_{risk}(s, a) + w_3R_{cost}(s, a) \]
+                where:
+                <ul>
+                    <li>\(R_{return}\) is the expected return</li>
+                    <li>\(R_{risk}\) is the risk-adjusted component</li>
+                    <li>\(R_{cost}\) accounts for transaction costs</li>
+                    <li>\(w_1, w_2, w_3\) are weights that sum to 1</li>
+                </ul>
+            </div>
+            
+            <div class="formula">
+                <h3>Parallelization</h3>
+                <p>The MCTS implementation uses parallel processing to improve performance:</p>
+                <ul>
+                    <li>Multiple simulations run concurrently</li>
+                    <li>Tree structure is shared using thread-safe data structures</li>
+                    <li>Load balancing across available CPU cores</li>
+                </ul>
+                <div class="implementation-note">
+                    The number of parallel simulations is configurable based on available computational resources.
+                </div>
+            </div>
+        </div>
+
+        <div id="implementation" class="section">
+            <h2>Implementation Details</h2>
+            
+            <div class="formula">
+                <h3>Numerical Methods</h3>
+                <ul>
+                    <li>Euler-Maruyama discretization for SDEs</li>
+                    <li>Antithetic variates for variance reduction</li>
+                    <li>Parallel processing for path generation</li>
+                    <li>Adaptive time stepping for jump events</li>
+                </ul>
+            </div>
+            
+            <div class="formula">
+                <h3>Performance Optimizations</h3>
+                <ul>
+                    <li>Vectorized operations using NumPy</li>
+                    <li>Efficient memory management for large simulations</li>
+                    <li>Caching of intermediate results</li>
+                    <li>GPU acceleration for large batches (optional)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

@@ -41,6 +41,11 @@ class ModelFactory:
         Raises:
             ValueError: If the model_type is unknown
         """
+        # Ensure model_type is a string
+        if not isinstance(model_type, str):
+            print(f"Warning: model_type ({model_type}) is not a string, converting to string")
+            model_type = str(model_type)
+            
         model_type = model_type.lower()
         
         if model_type == 'gbm':

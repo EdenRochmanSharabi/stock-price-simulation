@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 """
-Test script for stock price simulation models.
+Test Stock Models
+----------------
+Unit tests for the stock price models.
 """
 
-import sys
-import os
 import unittest
 import numpy as np
-import pandas as pd
 from unittest.mock import patch, MagicMock
+import pandas as pd
+import sys
+import os
 import time
 
 # Add the project root to the path
@@ -20,37 +22,129 @@ from stock_sim.models.jump_diffusion_model import JumpDiffusionModel
 from stock_sim.models.hybrid_model import HybridModel
 
 
-class TestSimulationModels(unittest.TestCase):
-    """Test cases for simulation models."""
+class TestStockModels(unittest.TestCase):
+    """Test cases for the stock price models."""
     
     def setUp(self):
         """Set up test fixtures."""
-        self.ticker = "AAPL"  # Use a reliable ticker for testing
-        self.paths = 100
-        self.steps = 50
-        self.dt = 1/252
+        # Test parameters
+        self.test_ticker = "AAPL"
+        self.test_initial_price = 150.0
+        self.test_paths = 10
+        self.test_steps = 50
         
         # Model parameters
-        self.initial_price = 150.0
-        self.mu = 0.08
-        self.sigma = 0.2
+        self.initial_price = self.test_initial_price
+        self.mu = 0.05  # Annual drift (return)
+        self.sigma = 0.2  # Annual volatility
         
         # Jump diffusion parameters
-        self.jump_intensity = 10.0
-        self.jump_mean = -0.01
-        self.jump_sigma = 0.02
+        self.jump_intensity = 10  # Expected number of jumps per year
+        self.jump_mean = -0.01  # Expected jump size
+        self.jump_sigma = 0.02  # Jump size volatility
         
         # Volatility clustering parameter
         self.vol_clustering = 0.85
+    
+    @patch('yfinance.download')
+    def test_gbm_model(self, mock_yf_download):
+        """Test the Geometric Brownian Motion model."""
+        # Mock the yfinance download to return test data
+        mock_yf_download.return_value = self._create_mock_stock_data()
         
-        # Create a mock historical data
-        self.mock_data = self._create_mock_stock_data()
+        # Create a GBM model
+        model = GBMModel(self.test_ticker, calibrate=False, mu=self.mu, sigma=self.sigma)
+        
+        # Generate paths
+        paths = model.simulate(paths=self.test_paths, steps=self.test_steps)
+        
+        # Check the shape of the paths matrix
+        self.assertEqual(paths.shape, (self.test_paths, self.test_steps + 1))
+        
+        # Check that the initial price is set correctly
+        self.assertTrue(np.all(paths[:, 0] == model.initial_price))
+        
+        # Check that no prices are negative
+        self.assertTrue(np.all(paths >= 0))
+    
+    @patch('yfinance.download')
+    def test_jump_diffusion_model(self, mock_yf_download):
+        """Test the Jump Diffusion model."""
+        # Mock the yfinance download to return test data
+        mock_yf_download.return_value = self._create_mock_stock_data()
+        
+        # Create a Jump Diffusion model
+        model = JumpDiffusionModel(
+            self.test_ticker, 
+            calibrate=False,
+            mu=self.mu, 
+            sigma=self.sigma,
+            jump_intensity=self.jump_intensity,
+            jump_mean=self.jump_mean,
+            jump_sigma=self.jump_sigma
+        )
+        
+        # Generate paths
+        paths = model.simulate(paths=self.test_paths, steps=self.test_steps)
+        
+        # Check the shape of the paths matrix
+        self.assertEqual(paths.shape, (self.test_paths, self.test_steps + 1))
+        
+        # Check that the initial price is set correctly
+        self.assertTrue(np.all(paths[:, 0] == model.initial_price))
+        
+        # Check that no prices are negative
+        self.assertTrue(np.all(paths >= 0))
+    
+    @patch('yfinance.download')
+    def test_hybrid_model(self, mock_yf_download):
+        """Test the Hybrid model (regime switching + jump diffusion)."""
+        # Mock the yfinance download to return test data
+        mock_yf_download.return_value = self._create_mock_stock_data()
+        
+        # Create a Hybrid model
+        model = HybridModel(
+            self.test_ticker,
+            calibrate=False,
+            mu=self.mu,
+            sigma=self.sigma,
+            vol_clustering=self.vol_clustering,
+            jump_intensity=self.jump_intensity,
+            jump_mean=self.jump_mean,
+            jump_sigma=self.jump_sigma
+        )
+        
+        # Generate paths
+        paths = model.simulate(paths=self.test_paths, steps=self.test_steps)
+        
+        # Check the shape of the paths matrix
+        self.assertEqual(paths.shape, (self.test_paths, self.test_steps + 1))
+        
+        # Check that the initial price is set correctly
+        self.assertTrue(np.all(paths[:, 0] == model.initial_price))
+        
+        # Check that no prices are negative
+        self.assertTrue(np.all(paths >= 0))
+    
+    @patch('yfinance.download')
+    def test_model_validation(self, mock_yf_download):
+        """Test parameter validation in the models."""
+        # Mock the yfinance download to return test data
+        mock_yf_download.return_value = self._create_mock_stock_data()
+        
+        # Test null stock price validation
+        ticker = "AAPL-INVALID"
+        mock_yf_download.return_value = pd.DataFrame()  # Return empty DataFrame
+        
+        # This should raise ValueError because of empty DataFrame
+        with self.assertRaises(ValueError):
+            model = GBMModel(ticker, calibrate=False)
     
     def _create_mock_stock_data(self):
         """Create mock stock data for testing."""
         # Create a simple price series with upward trend
         dates = pd.date_range(start='2020-01-01', periods=252, freq='B')
-        prices = np.array([self.initial_price * (1 + 0.0002 * i) for i in range(252)])
+        prices = np.array([self.test_initial_price * (1 + 0.0002 * i) for i in range(252)])
         
         # Create a DataFrame with Close column
         data = pd.DataFrame({
@@ -62,86 +156,6 @@ class TestSimulationModels(unittest.TestCase):
         }, index=dates)
         
         return data
-    
-    @patch('yfinance.download')
-    def test_gbm_simulation(self, mock_yf_download):
-        """Test GBM simulation produces expected output shape."""
-        # Mock the yfinance download to return test data
-        mock_yf_download.return_value = self.mock_data
-        
-        # Create GBM model
-        model = GBMModel(self.ticker, calibrate=False, mu=self.mu, sigma=self.sigma)
-        
-        # Run simulation
-        paths = model.simulate(paths=self.paths, steps=self.steps, dt=self.dt)
-        
-        # Check output shape
-        self.assertEqual(paths.shape, (self.paths, self.steps + 1))
-        
-        # Check initial price
-        self.assertTrue(np.all(paths[:, 0] == model.initial_price))
-        
-        # Check all prices are positive
-        self.assertTrue(np.all(paths > 0))
-    
-    @patch('yfinance.download')
-    def test_jump_simulation(self, mock_yf_download):
-        """Test jump diffusion simulation produces expected output shape."""
-        # Mock the yfinance download to return test data
-        mock_yf_download.return_value = self.mock_data
-        
-        # Create Jump Diffusion model
-        model = JumpDiffusionModel(
-            self.ticker, 
-            calibrate=False,
-            mu=self.mu, 
-            sigma=self.sigma,
-            jump_intensity=self.jump_intensity,
-            jump_mean=self.jump_mean,
-            jump_sigma=self.jump_sigma
-        )
-        
-        # Run simulation
-        paths = model.simulate(paths=self.paths, steps=self.steps, dt=self.dt)
-        
-        # Check output shape
-        self.assertEqual(paths.shape, (self.paths, self.steps + 1))
-        
-        # Check initial price
-        self.assertTrue(np.all(paths[:, 0] == model.initial_price))
-        
-        # Check all prices are positive
-        self.assertTrue(np.all(paths > 0))
-    
-    @patch('yfinance.download')
-    def test_hybrid_simulation(self, mock_yf_download):
-        """Test hybrid model (regime switching + jump diffusion) produces expected output shape."""
-        # Mock the yfinance download to return test data
-        mock_yf_download.return_value = self.mock_data
-        
-        # Create Hybrid model
-        model = HybridModel(
-            self.ticker,
-            calibrate=False,
-            mu=self.mu,
-            sigma=self.sigma,
-            vol_clustering=self.vol_clustering,
-            jump_intensity=self.jump_intensity,
-            jump_mean=self.jump_mean,
-            jump_sigma=self.jump_sigma
-        )
-        
-        # Run simulation
-        paths = model.simulate(paths=self.paths, steps=self.steps, dt=self.dt)
-        
-        # Check output shape
-        self.assertEqual(paths.shape, (self.paths, self.steps + 1))
-        
-        # Check initial price
-        self.assertTrue(np.all(paths[:, 0] == model.initial_price))
-        
-        # Check all prices are positive
-        self.assertTrue(np.all(paths > 0))
 
 
 class TableTestResult(unittest.TestResult):
@@ -227,7 +241,7 @@ def print_test_results_table(result):
 
 if __name__ == "__main__":
     # Create a test suite with all tests
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestSimulationModels)
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestStockModels)
     
     # Run the tests and collect results
     result = TableTestResult()

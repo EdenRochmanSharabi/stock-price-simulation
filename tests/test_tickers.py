@@ -11,7 +11,7 @@ import unittest
 # Add the project root to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.data.tickers import (
+from stock_sim.data.tickers import (
     get_sp500_by_sector,
     get_all_tickers,
     get_sample_tickers,

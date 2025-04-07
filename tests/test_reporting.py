@@ -13,10 +13,9 @@ import shutil
 # Add the project root to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.reporting.report_generator import (
+from stock_sim.analysis.reporting import (
     generate_stock_report,
-    generate_sector_report,
-    generate_master_report
+    generate_batch_report
 )
 
 
@@ -28,59 +27,63 @@ class TestReporting(unittest.TestCase):
         # Create a temporary directory for test outputs
         self.test_dir = tempfile.mkdtemp()
         
-        # Mock statistics data for a stock
-        self.stock_stats = {
+        # Mock result data for a stock
+        self.stock_result = {
             "ticker": "TEST",
+            "model_type": "gbm",
             "initial_price": 100.0,
-            "mean_final_price": 110.0,
-            "median_final_price": 105.0,
-            "std_final_price": 15.0,
-            "min_final_price": 70.0,
-            "max_final_price": 150.0,
-            "percentiles": {
-                "1%": 75.0,
-                "5%": 85.0,
-                "10%": 90.0,
-                "25%": 95.0,
-                "50%": 105.0,
-                "75%": 115.0,
-                "90%": 125.0,
-                "95%": 135.0,
-                "99%": 145.0
+            "statistics": {
+                "expected_return": 10.0,
+                "return_volatility": 15.0,
+                "var_95": 15.0,
+                "var_99": 25.0,
+                "max_drawdown": 25.0,
+                "sharpe_ratio": 0.67,
+                "percentiles": {
+                    "1%": 75.0,
+                    "5%": 85.0,
+                    "10%": 90.0,
+                    "25%": 95.0,
+                    "50%": 105.0,
+                    "75%": 115.0,
+                    "90%": 125.0,
+                    "95%": 135.0,
+                    "99%": 145.0
+                }
             },
-            "expected_return": 10.0,
-            "median_return": 5.0,
-            "var_95": 15.0,
-            "var_99": 25.0,
-            "prob_profit": 60.0,
-            "prob_loss": 40.0,
-            "prob_up_10percent": 45.0,
-            "prob_up_20percent": 30.0,
-            "prob_down_10percent": 25.0,
-            "prob_down_20percent": 15.0
+            "model_params": {
+                "mu": 0.08,
+                "sigma": 0.2
+            },
+            "plot_paths": {
+                "main": "test_plot.png",
+                "histogram": "test_histogram.png"
+            }
         }
         
-        # Mock sector results
-        self.sector_results = {
-            "sectors": {
-                "Technology": {
-                    "tickers": ["TEST1", "TEST2"],
-                    "stats": {
-                        "mean_expected_return": 12.5,
-                        "std_expected_return": 8.0,
-                        "mean_prob_up_20percent": 35.0,
-                        "mean_prob_down_20percent": 20.0
-                    }
+        # Mock batch results
+        self.batch_results = {
+            "TEST1": {
+                "ticker": "TEST1",
+                "model_type": "gbm",
+                "initial_price": 100.0,
+                "statistics": self.stock_result["statistics"],
+                "model_params": self.stock_result["model_params"],
+                "plot_paths": self.stock_result["plot_paths"]
+            },
+            "TEST2": {
+                "ticker": "TEST2",
+                "model_type": "jump",
+                "initial_price": 150.0,
+                "statistics": self.stock_result["statistics"],
+                "model_params": {
+                    "mu": 0.08,
+                    "sigma": 0.2,
+                    "lambda": 5.0,
+                    "mu_j": -0.01,
+                    "sigma_j": 0.02
                 },
-                "Healthcare": {
-                    "tickers": ["TEST3", "TEST4"],
-                    "stats": {
-                        "mean_expected_return": 8.0,
-                        "std_expected_return": 12.0,
-                        "mean_prob_up_20percent": 25.0,
-                        "mean_prob_down_20percent": 30.0
-                    }
-                }
+                "plot_paths": self.stock_result["plot_paths"]
             }
         }
     
@@ -91,40 +94,57 @@ class TestReporting(unittest.TestCase):
     
     def test_generate_stock_report(self):
         """Test generating a stock report."""
-        # Generate the report
-        report_file = generate_stock_report("TEST", self.stock_stats, self.test_dir)
+        # Create a mock template file for the test
+        template_dir = os.path.join(self.test_dir, "templates")
+        os.makedirs(template_dir, exist_ok=True)
         
-        # Check that the file exists
-        self.assertTrue(os.path.exists(report_file))
+        with open(os.path.join(template_dir, "stock_report_template.html"), "w") as f:
+            f.write("<html>{{ticker}} {{model_type}} {{statistics.expected_return}}</html>")
         
-        # Check that the file is not empty
-        self.assertTrue(os.path.getsize(report_file) > 0)
+        # Override the template path for testing
+        import stock_sim.analysis.reporting as reporting
+        original_template_dir = reporting.TEMPLATE_DIR
+        reporting.TEMPLATE_DIR = template_dir
+        
+        try:
+            # Generate the report
+            report_file = generate_stock_report("TEST", self.stock_result, self.test_dir)
+            
+            # Check that the file exists
+            self.assertTrue(os.path.exists(report_file))
+            
+            # Check that the file is not empty
+            self.assertTrue(os.path.getsize(report_file) > 0)
+        finally:
+            # Restore the original template dir
+            reporting.TEMPLATE_DIR = original_template_dir
     
-    def test_generate_sector_report(self):
-        """Test generating a sector report."""
-        # Generate the report
-        report_file = generate_sector_report(self.sector_results, self.test_dir)
+    def test_generate_batch_report(self):
+        """Test generating a batch report."""
+        # Create a mock template file for the test
+        template_dir = os.path.join(self.test_dir, "templates")
+        os.makedirs(template_dir, exist_ok=True)
         
-        # Check that the file exists
-        self.assertTrue(os.path.exists(report_file))
+        with open(os.path.join(template_dir, "batch_report_template.html"), "w") as f:
+            f.write("<html>Batch report for {{tickers|join(', ')}}</html>")
         
-        # Check that the file is not empty
-        self.assertTrue(os.path.getsize(report_file) > 0)
-    
-    def test_generate_master_report(self):
-        """Test generating a master report."""
-        # First generate some stock reports to link to
-        generate_stock_report("TEST1", self.stock_stats, self.test_dir)
-        generate_stock_report("TEST2", self.stock_stats, self.test_dir)
+        # Override the template path for testing
+        import stock_sim.analysis.reporting as reporting
+        original_template_dir = reporting.TEMPLATE_DIR
+        reporting.TEMPLATE_DIR = template_dir
         
-        # Generate the master report
-        report_file = generate_master_report(self.test_dir)
-        
-        # Check that the file exists
-        self.assertTrue(os.path.exists(report_file))
-        
-        # Check that the file is not empty
-        self.assertTrue(os.path.getsize(report_file) > 0)
+        try:
+            # Generate the report
+            report_file = generate_batch_report(self.batch_results, self.test_dir)
+            
+            # Check that the file exists
+            self.assertTrue(os.path.exists(report_file))
+            
+            # Check that the file is not empty
+            self.assertTrue(os.path.getsize(report_file) > 0)
+        finally:
+            # Restore the original template dir
+            reporting.TEMPLATE_DIR = original_template_dir
 
 
 if __name__ == "__main__":

@@ -8,8 +8,10 @@ Core simulation engine for running stock price simulations.
 
 import os
 import json
+import time
 from datetime import datetime
 from .models import ModelFactory
+from typing import Dict, Any, List, Optional, Callable
 
 
 class SimulationEngine:
@@ -44,40 +46,84 @@ class SimulationEngine:
                 os.makedirs(directory)
                 print(f"Created directory: {directory}")
     
-    def run_simulation(self, ticker, model_type='gbm', paths=1000, steps=21, dt=1/252,
-                     calibrate=True, lookback_period="2y", simulation_id=None, **kwargs):
+    def run_simulation(self, ticker: str, model_config: Dict[str, Any], calibrate: bool = True, simulation_id: Optional[Any] = None):
         """
-        Run a stock price simulation using specified model and parameters.
-        
+        Runs a single stock simulation using the provided configuration.
+
         Args:
             ticker (str): Stock ticker symbol
-            model_type (str): Type of model to use ('gbm', 'jump', or 'hybrid')
-            paths (int): Number of simulation paths
-            steps (int): Number of time steps
-            dt (float): Time step size in years
-            calibrate (bool): Whether to calibrate model from historical data
-            lookback_period (str): Period for historical data lookup
+            model_config (Dict[str, Any]): Dictionary containing simulation parameters:
+                - model_type (str): Type of model ('gbm', 'jump', 'hybrid', 'combined')
+                - paths (int): Number of simulation paths
+                - steps (int): Number of time steps per path
+                - dt (float): Time step size (e.g., 1/252 for daily)
+                - lookback_period (str): Period for historical data (e.g., "2y")
+                - Other model-specific parameters...
+            calibrate (bool): Whether to calibrate the model using historical data
             simulation_id (any): Optional ID for tracking simulation status
-            **kwargs: Additional model-specific parameters
-            
+
         Returns:
             dict: Simulation results and statistics
-            
+
         Raises:
             Exception: If any step of the simulation process fails
+            InterruptedError: If the simulation is stopped by the user
         """
         try:
+            # Extract parameters from model_config with defaults
+            model_type = model_config.get('model_type', 'gbm')
+            # Fix for model_type being a dict - ensure it's a string
+            if isinstance(model_type, dict) and 'type' in model_type:
+                # Handle case where model_type itself is a dictionary with a 'type' key
+                model_type = model_type['type']
+            # Ensure model_type is a string
+            if not isinstance(model_type, str):
+                model_type = str(model_type)  # Force conversion to string as last resort
+                
+            paths = int(model_config.get('paths', 1000))
+            steps = int(model_config.get('steps', 21))
+            dt = float(model_config.get('dt', 1/252))
+            lookback_period = model_config.get('lookback_period', '2y')
+            save_full_paths = model_config.get('save_full_paths', False)  # Default to False to save disk space
+
+            # Separate model-specific kwargs from general config
+            # Exclude keys already explicitly handled
+            known_keys = {'model_type', 'paths', 'steps', 'dt', 'lookback_period', 'save_full_paths'}
+            model_specific_kwargs = {k: v for k, v in model_config.items() if k not in known_keys}
+
             # Reset stop flag if a simulation ID is provided
             if simulation_id is not None:
                 self._stop_requested[simulation_id] = False
             
+            # --- DEBUGGING START ---
+            print(f"[DEBUG ENGINE] Received model_config: {model_config}")
+            print(f"[DEBUG ENGINE] Extracted model_type: {model_type} (Type: {type(model_type)})")
+            print(f"[DEBUG ENGINE] Extracted model_specific_kwargs: {model_specific_kwargs}")
+            if not isinstance(model_type, str):
+                 print("[DEBUG ENGINE] ERROR: model_type is NOT a string!")
+                 # Optionally raise an error here to halt execution immediately
+                 # raise TypeError(f"Expected model_type to be str, but got {type(model_type)}")
+            # --- DEBUGGING END ---
+
             # Create the model using the factory
-            model = ModelFactory.create_model(
-                model_type, ticker, 
-                lookback_period=lookback_period,
-                calibrate=calibrate,
-                **kwargs
-            )
+            try:
+                model = ModelFactory.create_model(
+                    model_type=model_type, # Pass the extracted model_type string
+                    ticker=ticker,
+                    lookback_period=lookback_period,
+                    calibrate=calibrate,
+                    **model_specific_kwargs # Pass other params from config
+                )
+            except ValueError as e:
+                # If we can't load historical data, create a message and raise
+                if "Could not load historical data" in str(e):
+                    error_msg = f"Error processing {ticker}: {str(e)}"
+                    print(error_msg)
+                    # Propagate the error but with a cleaner message
+                    raise ValueError(error_msg)
+                else:
+                    # For other ValueErrors, re-raise
+                    raise
             
             # Get the initial price
             initial_price = model.initial_price
@@ -110,7 +156,7 @@ class SimulationEngine:
             
             # Save simulation data
             from .analysis import save_simulation_data
-            data_path = save_simulation_data(ticker, paths_matrix, statistics, self._data_dir)
+            data_path = save_simulation_data(ticker, paths_matrix, statistics, self._data_dir, save_full_paths=save_full_paths)
             
             # Check if stop was requested
             if simulation_id is not None and self._stop_requested.get(simulation_id, False):
@@ -124,13 +170,22 @@ class SimulationEngine:
             # Create result dictionary
             result = {
                 'ticker': ticker,
-                'model_type': model_type,
+                'model_type': model_type, # Use extracted model_type
                 'paths_matrix': paths_matrix,
                 'statistics': statistics,
                 'initial_price': initial_price,
-                'model_params': self._get_model_params(model, model_type),
+                'model_params': self._get_model_params(model, model_type), # Use extracted model_type
                 'data_path': data_path,
-                'plot_paths': plot_paths
+                'plot_paths': plot_paths,
+                # Add simulation config details to the result for clarity
+                'simulation_config': {
+                    'paths': paths,
+                    'steps': steps,
+                    'dt': dt,
+                    'lookback_period': lookback_period,
+                    'calibrate': calibrate,
+                    **model_specific_kwargs
+                }
             }
             
             # Check if stop was requested
@@ -151,6 +206,16 @@ class SimulationEngine:
             
         except InterruptedError:
             # Re-raise interruption errors
+            raise
+        except ValueError as e:
+            # For "Could not load historical data" errors, we want to propagate the clean message
+            if "Error processing" in str(e):
+                raise
+            
+            # For other ValueError exceptions, add more context
+            import traceback
+            print(f"Error running simulation for {ticker}: {str(e)}")
+            traceback.print_exc()
             raise
         except Exception as e:
             import traceback
@@ -210,24 +275,19 @@ class SimulationEngine:
             # Import the reporting module
             from .analysis import generate_stock_report
             
-            # Add simulation parameters to statistics for the report
-            report_stats = result['statistics'].copy()
-            report_stats.update({
+            # Create a modified result with the needed structure for the report generator
+            report_result = {
+                'statistics': result['statistics'].copy(),
+                'paths_matrix': result['paths_matrix'],
                 'model_type': result['model_type'],
-                'num_paths': len(result['paths_matrix']),
-                'num_steps': result['paths_matrix'].shape[1] - 1,
-                'dt': 1/252,  # Default value, modify if needed
-                'initial_price': float(result['initial_price']),
-                **result['model_params']
-            })
+                'model_params': result['model_params']
+            }
             
-            # Convert percentiles to strings to avoid type issues
-            if 'percentiles' in report_stats:
-                for key in report_stats['percentiles']:
-                    report_stats['percentiles'][key] = float(report_stats['percentiles'][key])
+            # Ensure num_paths is set in statistics
+            report_result['statistics']['num_paths'] = result['paths_matrix'].shape[0]
             
             # Generate the report
-            report_path = generate_stock_report(ticker, report_stats, self._reports_dir)
+            report_path = generate_stock_report(ticker, report_result, self._reports_dir)
             print(f"Generated report for {ticker}: {report_path}")
             return report_path
             
@@ -237,62 +297,76 @@ class SimulationEngine:
             traceback.print_exc()
             return None
     
-    def batch_simulate(self, tickers, model_type='gbm', paths=1000, steps=21, simulation_id=None, **kwargs):
+    def batch_simulate(self, tickers: List[str], model_config: Dict[str, Any], simulation_id: Optional[Any] = None, status_callback: Optional[Callable] = None):
         """
-        Run simulations for multiple tickers in batch.
+        Perform batch simulation for multiple tickers.
         
         Args:
-            tickers (list): List of ticker symbols
-            model_type (str): Type of model to use
-            paths (int): Number of simulation paths
-            steps (int): Number of time steps
+            tickers (List[str]): List of stock ticker symbols
+            model_config (Dict[str, Any]): Model configuration parameters
             simulation_id (any): Optional ID for tracking simulation status
-            **kwargs: Additional simulation parameters
+            status_callback (Callable): Optional callback for progress updates
             
         Returns:
             dict: Results for each ticker
         """
         results = {}
         
-        # Reset stop flag if a simulation ID is provided
-        if simulation_id is not None:
-            self._stop_requested[simulation_id] = False
+        if not tickers:
+            print("No tickers provided for batch simulation")
+            return results
         
-        for ticker in tickers:
-            # Check if stop was requested
-            if simulation_id is not None and self._stop_requested.get(simulation_id, False):
-                print(f"Batch simulation {simulation_id} was stopped by user")
-                break
+        total_tickers = len(tickers)
+        print(f"Starting batch simulation for {total_tickers} stocks...")
+        
+        try:
+            for i, ticker in enumerate(tickers):
+                if simulation_id is not None and self._stop_requested.get(simulation_id, False):
+                    print(f"Batch simulation {simulation_id} was stopped by user")
+                    raise InterruptedError("Batch simulation was stopped by user")
                 
-            try:
-                print(f"\nStarting simulation for {ticker}...")
+                progress = (i / total_tickers) * 100
+                print(f"[{progress:.1f}%] Processing {ticker} ({i+1}/{total_tickers})...")
                 
-                # Use the same simulation ID for stopping individual ticker simulations
-                result = self.run_simulation(
-                    ticker, model_type=model_type, 
-                    paths=paths, steps=steps,
-                    simulation_id=simulation_id,
-                    **kwargs
-                )
-                results[ticker] = result
-                print(f"Completed {ticker} simulation")
-            except InterruptedError:
-                # Stop was requested during this ticker's simulation
-                results[ticker] = None
-                break
-            except Exception as e:
-                print(f"Failed to simulate {ticker}: {e}")
-                results[ticker] = None
-        
-        # Generate batch report if not stopped
-        if simulation_id is None or not self._stop_requested.get(simulation_id, False):
-            self._generate_batch_report(results)
-        
-        # Clean up stop tracking
-        if simulation_id is not None and simulation_id in self._stop_requested:
-            del self._stop_requested[simulation_id]
+                if status_callback:
+                    status_callback(ticker=ticker, status="running", progress=progress)
+                
+                try:
+                    result = self.run_simulation(ticker, model_config, simulation_id=simulation_id)
+                    results[ticker] = result
+                    if status_callback:
+                        status_callback(ticker=ticker, status="completed", progress=progress)
+                except ValueError as ve:
+                    print(f"Error processing {ticker}: {str(ve)}")
+                    if status_callback:
+                        status_callback(ticker=ticker, status="error", error=str(ve), progress=progress)
+                except Exception as e:
+                    print(f"Error processing {ticker}: {str(e)}")
+                    if status_callback:
+                        status_callback(ticker=ticker, status="error", error=str(e), progress=progress)
             
-        return results
+            # Generate batch report if results exist
+            if results:
+                self._generate_batch_report(results)
+                
+                # Clean up raw data files to save disk space
+                from .analysis import cleanup_raw_data
+                cleanup_raw_data(data_dir=self._data_dir)
+                
+            return results
+            
+        except InterruptedError:
+            # Still generate batch report for completed simulations
+            if results:
+                self._generate_batch_report(results)
+                
+                # Clean up raw data files to save disk space
+                from .analysis import cleanup_raw_data
+                cleanup_raw_data(data_dir=self._data_dir)
+                
+            if status_callback:
+                status_callback(ticker="batch", status="interrupted", progress=100)
+            raise
     
     def _generate_batch_report(self, results):
         """Generate aggregate report for batch simulation."""
