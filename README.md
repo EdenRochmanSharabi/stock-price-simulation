@@ -1,4 +1,4 @@
-# Stock Price Simulation - GitHub Pages Edition
+# Stock Price Simulation
 
 This repository contains a static website version of the Stock Price Simulation project, designed to be hosted on GitHub Pages.
 
